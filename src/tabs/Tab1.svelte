@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import EventEmitter from "../utils/EventEmitter.js"; // Use your event emitter utility
+  import LogComponent from '../components/LogComponent.svelte'; // Import LogComponent
 
   let progress = 0;
   let logs = [];
@@ -16,7 +17,6 @@
     // Subscribe to log events
     EventEmitter.on("logEvent", (message) => {
       logs = [...logs, message]; // Add new log messages
-      updateLogs(message);
     });
   });
 
@@ -37,14 +37,6 @@
     if (progressBar) {
       progressBar.style.width = `${value}%`;
       progressBar.textContent = `${value}%`;
-    }
-  }
-
-  // Function to update logs in the output area
-  function updateLogs(message) {
-    const outputArea = document.getElementById("herbie_output");
-    if (outputArea) {
-      outputArea.textContent = message;
     }
   }
 
@@ -135,10 +127,8 @@
       </div>
     </div>
 
-    <!-- Output Area -->
-    <div class="herbie_output" aria-label="Herbie Output Area">
-      <span id="herbie_output">Click parse or run</span>
-    </div>
+    <!-- Log Component -->
+    <LogComponent {logs} />
   </div>
 </div>
 
@@ -161,4 +151,20 @@
     line-height: 20px;
     transition: width 0.5s ease;
   }
+  .button {
+  background-color: var(--primary-base, #007bff); /* Fallback */
+  color: var(--base-white, #ffffff); /* Fallback */
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--button-border-radius-md, 8px); /* Fallback */
+  font-size: var(--font-size-md, 16px); /* Fallback */
+  transition: var(--transition-base, all 0.3s ease);
+}
+
+.button:hover {
+  background-color: var(--primary-dark, #0056b3); /* Fallback */
+  box-shadow: var(--shadow-base-dark, 0px 4px 6px rgba(0, 0, 0, 0.2));
+}
 </style>
+
+
