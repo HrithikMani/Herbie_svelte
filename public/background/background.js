@@ -1,38 +1,49 @@
+import { ParseScript } from '../parser/parser.js';
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "COLOR_UPDATE") {
-      const color = message.color.trim();
-  
-      // Validate the color
-      const isValidColor =
-        /^#[0-9A-F]{6}$/i.test(color) ||
-        /^rgb\((\d{1,3},\s*){2}\d{1,3}\)$/i.test(color) ||
-        /^[a-z]+$/i.test(color);
-  
-      if (!isValidColor) {
-        sendResponse({ status: "error", message: "Invalid color format. Try again." });
-        return;
+  if (message.action === 'parseLine') {
+    const scriptContent = message.payload;
+
+    (async () => {
+      try {
+        // Select the first line from the input
+        const firstLine = scriptContent.split('\n')[0].trim();
+        console.log('Parsing single line:', firstLine);
+
+        // Parse the first line
+        const result = await ParseScript(firstLine);
+        console.log('Parsed result:', result);
+
+        // Send success response
+        sendResponse({ status: 'success', data: result });
+      } catch (error) {
+        console.error('Error parsing line:', error);
+        sendResponse({ status: 'error', message: 'Failed to parse line', error: error.message });
       }
-  
-      // Relay the color to the content script
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) {
-          chrome.tabs.sendMessage(
-            tabs[0].id,
-            { type: "APPLY_COLOR", color },
-            (response) => {
-              if (chrome.runtime.lastError) {
-                console.error("Error communicating with content script:", chrome.runtime.lastError.message);
-                sendResponse({ status: "error", message: "Failed to apply color." });
-              } else {
-                sendResponse(response);
-              }
-            }
-          );
-        }
-      });
-  
-      // Required for asynchronous responses
-      return true;
-    }
-  });
-  
+    })();
+
+    return true; // Keep the port open for asynchronous operations
+  }
+
+  if (message.action === 'parseScript') {
+    const scriptContent = message.payload;
+
+    (async () => {
+      try {
+        console.log('Parsing entire script:', scriptContent);
+
+        // Pass the entire script to ParseScript
+        const result = await ParseScript(scriptContent);
+        console.log('Parsed script result:', result);
+
+        // Send success response
+        sendResponse({ status: 'success', data: result });
+      } catch (error) {
+        console.error('Error parsing script:', error);
+        sendResponse({ status: 'error', message: 'Failed to parse script', error: error.message });
+      }
+    })();
+
+    return true; // Keep the port open for asynchronous operations
+  }
+});

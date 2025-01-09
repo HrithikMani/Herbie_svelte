@@ -20,16 +20,16 @@
     });
   });
 
-  // Simulate progress updates
-  function simulateProgress() {
-    let value = 0;
-    const interval = setInterval(() => {
-      value += 10;
-      EventEmitter.emit("progressUpdate", value);
-      EventEmitter.emit("logEvent", `Progress updated to ${value}%`);
-      if (value >= 100) clearInterval(interval);
-    }, 1000);
-  }
+  // // Simulate progress updates
+  // function simulateProgress() {
+  //   let value = 0;
+  //   const interval = setInterval(() => {
+  //     value += 10;
+  //     EventEmitter.emit("progressUpdate", value);
+  //     EventEmitter.emit("logEvent", `Progress updated to ${value}%`);
+  //     if (value >= 100) clearInterval(interval);
+  //   }, 1000);
+  // }
 
   // Function to update the progress bar DOM
   function updateProgressBar(value) {
@@ -40,10 +40,23 @@
     }
   }
 
-  // Event handler for "Herbie Run"
+
   function handleHerbieRun() {
-    simulateProgress(); // Start the progress simulation
-  }
+  const scriptContent = document.getElementById('herbie_script').value;
+
+  // Send a message to the background worker
+  chrome.runtime.sendMessage(
+    {
+      action: 'parseScript',
+      payload: scriptContent,
+    },
+    (response) => {
+      // Handle the response from the background script
+      console.log('Background response:', response);
+    }
+  );
+}
+
 </script>
 
 <div id="tab1" class="tab-content active">
@@ -98,7 +111,8 @@
         rows="10"
         cols="80"
         aria-label="Herbie Script Area"
-      ></textarea>
+      >Click on  "button"
+      Click on  "button3"</textarea>
     </div>
 
     <!-- Command Bar -->

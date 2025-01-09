@@ -11,7 +11,7 @@
     "permissions": [
       "webNavigation",
       "storage",
-      "windows"
+      "windows","activeTab", "scripting"
     ],
     
     "host_permissions": [
