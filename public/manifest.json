@@ -31,7 +31,8 @@
         {
             "matches": ["<all_urls>"],
             "js":[
-                "content-scripts/content-scripts.js"
+                "content-scripts/content-scripts.js",
+                "dist/mie-simulijs.js"
             ]
         }
     ]
