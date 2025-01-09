@@ -1,6 +1,8 @@
 <script>
      import 'mie-ds-brand-grayscale-light/dist/styles.css';
 </script>
+
+  
 <div id="tab1" class="tab-content active">
   <div id="herbie_div">
     <div id="herbie_buttons">
@@ -22,17 +24,25 @@
       <label class="prompt" for="herbie_script">Script:</label>
       <textarea id="herbie_script" placeholder="Type or load your test scripts here..." name="Script" rows="10" cols="80" aria-label="Herbie Script Area"></textarea>
     </div>
+    <div class="herbie_bar">
+      <label for="herbie_command">Command:</label>
+      <input id="herbie_command" type="text" name="Command" maxlength="100" aria-label="Herbie Command Input"/>
+      <div class="button-container">
+        <button id="herbie_add" class="button" aria-label="Add Command"><i class="fas fa-plus"></i> Add</button>
+        <button id="herbie_parse" class="button" aria-label="Parse Command"><i class="fas fa-code"></i> Parse</button>
+        <button id="herbie_clear" class="button" aria-label="Clear Command"><i class="fas fa-trash-alt"></i> Clear</button>
+        <button id="herbie_save_logs" class="button" aria-label="Save Command"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </div>
     <div class="herbie_output" aria-label="Herbie Output Area">
       <span id="herbie_output">Click parse or run</span>
     </div>
-    <div class="button-container">
-      <button id="herbie_add" class="button" aria-label="Add Command"><i class="fas fa-plus"></i> Add</button>
-      <button id="herbie_parse" class="button" aria-label="Parse Command"><i class="fas fa-code"></i> Parse</button>
-      <button id="herbie_clear" class="button" aria-label="Clear Command"><i class="fas fa-trash-alt"></i> Clear</button>
-      <button id="herbie_save_logs" class="button" aria-label="Save Command"><i class="fas fa-save"></i> Save</button>
-    </div>
   </div>
 </div>
+
+
+
+
 <style>
   .button {
     background-color: var(--primary-base, #007bff); /* Fallback */
