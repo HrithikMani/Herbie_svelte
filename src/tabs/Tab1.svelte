@@ -43,19 +43,17 @@
 
   function handleHerbieRun() {
   const scriptContent = document.getElementById('herbie_script').value;
+  logs=[];
+  chrome.runtime.sendMessage({
+    action: 'excuteScript',
+    payload: scriptContent,
+  },(response)=>{
+    console.log('Background response:', response);
+  })
 
-  // Send a message to the background worker
-  chrome.runtime.sendMessage(
-    {
-      action: 'parseScript',
-      payload: scriptContent,
-    },
-    (response) => {
-      // Handle the response from the background script
-      console.log('Background response:', response);
-    }
-  );
   }
+
+
   function handleParseCommand(){
     const scriptContent = document.getElementById('herbie_command').value;
 
@@ -67,7 +65,7 @@
     (response) => {
       // Handle the response from the background script
       console.log('Background response:', response);
-      EventEmitter.emit("logEvent",response)
+      EventEmitter.emit("logEvent",response.data)
     }
   );
 
@@ -131,8 +129,7 @@
         rows="10"
         cols="80"
         aria-label="Herbie Script Area"
-      >Click on  "button"
-      Click on  "button3"</textarea>
+      >click on '#test-button'</textarea>
     </div>
 
     <!-- Command Bar -->
