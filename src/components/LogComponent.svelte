@@ -1,54 +1,47 @@
 <script>
-    export let logs = []; // Accept logs as a prop
-  </script>
-  
-  <div class="log-container">
-    <h3>Execution Logs</h3>
-    <ul class="log-list">
-      {#each logs as log, index}
-        <li class="log-item">
-          <span class="log-line">Line: {index + 1}, </span>
-          <span class="log-message">{log}</span>
-        </li>
+  export let logs = [];
+
+  // Function to clear logs
+  function clearLogs() {
+    logs = [];
+  }
+</script>
+
+<style>
+  #execution-logs-container {
+    padding: 1rem;
+    font-family: Arial, sans-serif;
+    max-height: 200px; 
+    overflow-y: auto; 
+    background-color: #fff; 
+  }
+
+  .log-entry {
+    font-size: 1rem;
+    line-height: 2;
+    white-space: pre-wrap; /* Preserve whitespace and line breaks */
+    margin: 0; /* Remove extra margin */
+    padding: 0; /* Remove padding for a clean look */
+    color: #333; /* Optional: Adjust text color */
+  }
+
+
+</style>
+
+<div>
+  <div id="execution-logs-container">
+    {#if logs.length > 0}
+      {#each logs as log}
+        <div class="log-entry">
+          {#if typeof log === 'object'}
+            {JSON.stringify(log, null, 2)}
+          {:else}
+            {log}
+          {/if}
+        </div>
       {/each}
-    </ul>
+    {:else}
+      <div class="log-entry">No logs to display.</div>
+    {/if}
   </div>
-  
-  <style>
-    .log-container {
-      background: #f9f9f9;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      padding: 10px;
-      margin-top: 10px;
-      max-height: 150px;
-      overflow-y: auto;
-    }
-  
-    .log-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-  
-    .log-item {
-      padding: 5px 0;
-      border-bottom: 1px solid #eee;
-      font-family: monospace;
-      font-size: 1rem;
-      font-size: 1.5em;
-    }
-  
-    .log-item:last-child {
-      border-bottom: none;
-    }
-  
-    .log-line {
-      font-weight: bold;
-    }
-  
-    .log-message {
-      color: #333;
-    }
-  </style>
-  
+</div>

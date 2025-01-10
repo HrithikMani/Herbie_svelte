@@ -20,16 +20,16 @@
     });
   });
 
-  // // Simulate progress updates
-  // function simulateProgress() {
-  //   let value = 0;
-  //   const interval = setInterval(() => {
-  //     value += 10;
-  //     EventEmitter.emit("progressUpdate", value);
-  //     EventEmitter.emit("logEvent", `Progress updated to ${value}%`);
-  //     if (value >= 100) clearInterval(interval);
-  //   }, 1000);
-  // }
+  // Simulate progress updates
+  function simulateProgress() {
+    let value = 0;
+    const interval = setInterval(() => {
+      value += 10;
+      EventEmitter.emit("progressUpdate", value);
+      EventEmitter.emit("logEvent", `Progress updated to ${value}%`);
+      if (value >= 100) clearInterval(interval);
+    }, 1000);
+  }
 
   // Function to update the progress bar DOM
   function updateProgressBar(value) {
@@ -55,7 +55,27 @@
       console.log('Background response:', response);
     }
   );
-}
+  }
+  function handleParseCommand(){
+    const scriptContent = document.getElementById('herbie_command').value;
+
+    chrome.runtime.sendMessage(
+    {
+      action: 'parseLine',
+      payload: scriptContent,
+    },
+    (response) => {
+      // Handle the response from the background script
+      console.log('Background response:', response);
+      EventEmitter.emit("logEvent",response)
+    }
+  );
+
+
+  }
+  function handleClearButton(){
+    logs = [];
+  }
 
 </script>
 
@@ -129,10 +149,10 @@
         <button id="herbie_add" class="button" aria-label="Add Command">
           <i class="fas fa-plus"></i> Add
         </button>
-        <button id="herbie_parse" class="button" aria-label="Parse Command">
+        <button id="herbie_parse" class="button" aria-label="Parse Command"     on:click={handleParseCommand}>
           <i class="fas fa-code"></i> Parse
         </button>
-        <button id="herbie_clear" class="button" aria-label="Clear Command">
+        <button id="herbie_clear" class="button" aria-label="Clear Command" on:click={handleClearButton}>
           <i class="fas fa-trash-alt"></i> Clear
         </button>
         <button id="herbie_save_logs" class="button" aria-label="Save Command">
