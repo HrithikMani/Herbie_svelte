@@ -1,4 +1,6 @@
 import { handleParseLine, handleParseScript } from './utils/parseUtils.js';
+import {handleRunScript,handleExecuteScript} from './utils/runUtils.js';
+
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'parseLine') {
@@ -14,4 +16,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true; 
   }
+  if (message.action === 'runScript') {
+    (async () => {
+      await handleRunScript(message.payload, sendResponse);
+    })();
+    return true; 
+  }
+
+  if (message.action === 'excuteScript') {
+    (async () => {
+      await handleExecuteScript(message.payload, sendResponse);
+    })();
+    return true; 
+  }
+
+  
 });
