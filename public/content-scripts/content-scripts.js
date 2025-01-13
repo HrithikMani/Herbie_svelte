@@ -6,13 +6,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log("From content scripts: execute command received");
       console.log("Executing command:", message.data);
 
-      const element = document.getElementById("test-button");
-      // Call the execute function
       (async () => {
-          await execute("click", element, 1000);
-      })();
+        const element = document.getElementById("text-input");
+        if (!element) {
+            console.error("Element not found");
+            sendResponse({ status: 'error', message: 'Element not found' });
+            return;
+        }
 
-      sendResponse({ status: 'success', message: 'Command executed successfully!' });
+    
+        await execute("navigate", element, 1000,"https://www.google.com/"); // Click operation
+
+        sendResponse({ status: 'success', message: 'Commands executed successfully!' });
+    })();
 
       // Return true to keep the message channel open
       return true;
