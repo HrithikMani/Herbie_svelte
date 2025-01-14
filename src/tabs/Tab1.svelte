@@ -5,9 +5,12 @@
 
   let progress = 0;
   let logs = [];
-
+  let scriptContent = "";
   // Handle event subscriptions on mount
   onMount(() => {
+    chrome.storage.local.get("herbie_script", (result) => {
+      scriptContent = result.herbie_script || ""; // Set saved content or default to an empty string
+    });
     // Subscribe to progress updates
     EventEmitter.on("progressUpdate", (value) => {
       progress = value; // Update the progress bar
@@ -19,6 +22,25 @@
       logs = [...logs, message]; // Add new log messages
     });
   });
+
+  // Popup script: Listen for messages from the background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "updatePopupProgressBar") {
+    console.log("Message received in popup:", message.data);
+      var value = Math.round((message.data.line/message.data.total)*100)
+    EventEmitter.emit("progressUpdate", value);
+    sendResponse({ status: "Popup updated" });
+  }
+});
+
+ // Save the script content to Chrome storage when it changes
+ function saveScriptContent() {
+    chrome.storage.local.set({ herbie_script: scriptContent }, () => {
+      console.log("Script content saved to Chrome storage:", scriptContent);
+    });
+  }
+
+
 
   // Simulate progress updates
   function simulateProgress() {
@@ -42,6 +64,7 @@
 
 
   function handleHerbieRun() {
+    EventEmitter.emit("progressUpdate", 0);
   const scriptContent = document.getElementById('herbie_script').value;
   logs=[];
   chrome.runtime.sendMessage({
@@ -123,13 +146,15 @@
     <div class="herbie_script">
       <label class="prompt" for="herbie_script">Script:</label>
       <textarea
-        id="herbie_script"
-        placeholder="Type or load your test scripts here..."
-        name="Script"
-        rows="10"
-        cols="80"
-        aria-label="Herbie Script Area"
-      >click on '#test-button'</textarea>
+      id="herbie_script"
+      bind:value={scriptContent}
+      placeholder="Type or load your test scripts here..."
+      name="Script"
+      rows="10"
+      cols="80"
+      aria-label="Herbie Script Area"
+      on:input={saveScriptContent}
+    ></textarea>
     </div>
 
     <!-- Command Bar -->

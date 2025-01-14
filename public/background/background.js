@@ -29,6 +29,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true; 
   }
-
+  if(message.action==='updateProgress'){
+    console.log("Message received in popup:", message.data);
+        chrome.runtime.sendMessage({
+          action: "updatePopupProgressBar",
+          data: message.data,
+        });
+    sendResponse({ status: "Message relayed to popup" });
+  }
   
 });

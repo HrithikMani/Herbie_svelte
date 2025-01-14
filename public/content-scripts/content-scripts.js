@@ -5,47 +5,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("From content scripts: execute command received");
     console.log("Executing commands:", message.data);
 
-    const test = [
-      {
-          "line": 0,
-          "code": [
-              "type",
-              "\"Hrithik\"",
-              "in",
-              "\"lastname\""
-          ],
-          "src": "type \"Hrithik\" into \"lastname\"",
-          "timeout": 5000,
-          "subcommands": []
-      },
-      {
-          "line": 1,
-          "code": [
-              "type",
-              "\"Mani\"",
-              "in",
-              "\"firstname\""
-          ],
-          "src": "type \"Mani\" into \"firstname\"",
-          "timeout": 5000,
-          "subcommands": []
-      },
-      {
-          "line": 2,
-          "code": [
-              "click",
-              "in",
-              "\"Submit\""
-          ],
-          "src": "click on \"Submit\"",
-          "timeout": 5000,
-          "subcommands": []
-      }
-  ];
-
+    const test = message.data;
+    console.log(test);
     (async () => {
       try {
+        var i=0;
         for (const item of test) {
+          i=i+1;
           const action = item.code[0]; // e.g., "type" or "click"
           const value = action === "type" ? item.code[1].replace(/"/g, "") : null; // Extract the value if action is "type"
           const xpath = item.code[item.code.indexOf("in") + 1].replace(/"/g, ""); // Extract the XPath
@@ -61,6 +27,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
 
           await execute(action, element, delay, value); 
+
+              // Content script: Sending a message to the background script
+                chrome.runtime.sendMessage(
+                  {
+                    action: "updateProgress",
+                    data: {line:i,total:test.length},
+                  },
+                  (response) => {
+                    console.log("Response from background script:", response);
+                  }
+                );
+
         }
 
         sendResponse({ status: 'success', message: 'Commands executed successfully!' });
