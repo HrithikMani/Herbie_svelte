@@ -28,8 +28,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
           await execute(action, element, delay, value); 
 
-              // Content script: Sending a message to the background script
-                chrome.runtime.sendMessage(
+              chrome.runtime.sendMessage(
                   {
                     action: "updateProgress",
                     data: {line:i,total:test.length},
@@ -38,7 +37,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     console.log("Response from background script:", response);
                   }
                 );
-
+                
+                chrome.runtime.sendMessage(
+                  {
+                    action: "updateLog",
+                    data: {line:i,desc:"Performed "+action+"' on "+xpath},
+                  },
+                  (response) => {
+                    console.log("Response from background script:", response);
+                  }
+                );
         }
 
         sendResponse({ status: 'success', message: 'Commands executed successfully!' });
@@ -49,5 +57,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
 
     return true; // Keep the message channel open for async response
+  }
+});
+
+
+document.addEventListener("click", (event) => {
+  const target = event.target;
+
+  // Check if the clicked element is a link with the class "trigger-extension"
+  if (target.tagName === "A" && target.classList.contains("trigger-extension")) {
+    event.preventDefault(); // Prevent the default link action
+
+    // Send a message to the background script
+    chrome.runtime.sendMessage({ action: "openPopup" }, (response) => {
+      console.log("Popup triggered:", response);
+    });
   }
 });

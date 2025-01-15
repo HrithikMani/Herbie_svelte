@@ -31,7 +31,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     EventEmitter.emit("progressUpdate", value);
     sendResponse({ status: "Popup updated" });
   }
+  if (message.action === "updateLogPopup") {
+    console.log("Message received in popup:", message.data);
+    EventEmitter.emit("logEvent", "Line: "+(message.data.line+1)+", "+message.data.desc);
+    sendResponse({ status: "Popup updated" });
+  }
 });
+
+
+
+
 
  // Save the script content to Chrome storage when it changes
  function saveScriptContent() {

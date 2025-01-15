@@ -5,9 +5,9 @@
             "type",
             "\"Hrithik\"",
             "in",
-            "\"//*[@id='firstName']\""
+            "\"lastname\""
         ],
-        "src": "type \"Hrithik\" into \"//*[@id='firstName']\"",
+        "src": "type \"Hrithik\" into \"lastname\"",
         "timeout": 5000,
         "subcommands": []
     },
@@ -17,9 +17,9 @@
             "type",
             "\"Mani\"",
             "in",
-            "\"//*[@id='lastName']\""
+            "\"firstname\""
         ],
-        "src": "type \"Mani\" into \"//*[@id='lastName']\"",
+        "src": "type \"Mani\" into \"firstname\"",
         "timeout": 5000,
         "subcommands": []
     },
@@ -28,9 +28,9 @@
         "code": [
             "click",
             "in",
-            "\"//*[@id='welcomeForm']/button\""
+            "\"Submit\""
         ],
-        "src": "click on \"//*[@id='welcomeForm']/button\"",
+        "src": "click on \"Submit\"",
         "timeout": 5000,
         "subcommands": []
     }

@@ -39,6 +39,7 @@
                 "content-scripts/execute.js",
                 "content-scripts/findelement.js",
                 "content-scripts/content-scripts.js",
+                "content-scripts/dragdrop.js",
                 "content-scripts/test.json"
               ],  "type":"module"
         }

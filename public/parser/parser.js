@@ -23,7 +23,7 @@ async function ParseScript(script) {
     // Create an array of promises for each line parsing
     let promises = lines.map(async (line, i) => {
         var indentLevel = line.search(/\S|$/); // Find the indentation level
-        var cmd = { line: i, code: [], src: line.trim(), timeout: 5000, subcommands: [] };
+        var cmd = { line: i, code: [], src: line.trim(), timeout: 1000, subcommands: [] };
 
         var stmt = line.trim().match(/\w+|'[^']+'|"[^"]+"|\{\{(.*?)\}\}|\*|:/g); // tokenize line
         if (stmt) {

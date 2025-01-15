@@ -38,4 +38,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: "Message relayed to popup" });
   }
   
+  if(message.action==='updateLog'){
+    console.log("Message received in popup:", message.data);
+        chrome.runtime.sendMessage({
+          action: "updateLogPopup",
+          data: message.data,
+        });
+    sendResponse({ status: "Message relayed to popup" });
+  }
+});
+
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "openPopup") {
+    chrome.action.openPopup(); // This will open the extension's popup
+    sendResponse({ status: "Popup opened" });
+  }
 });
