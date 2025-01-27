@@ -139,7 +139,7 @@ async function parseStatement(stmt, cmd) {
             const relevantVariables = (cmd.code[0]==("type") || cmd.code[0]==("verify") || cmd.code[0]==("select")) ? variables.slice(1) : variables;
             
             relevantVariables.forEach(variable => {
-                updatedXpath = updatedXpath.replace('{$}', variable);
+                updatedXpath = updatedXpath.replace('{$}', "'"+variable+"'");
             });
 
             var inclause = cmd.code.indexOf("in");

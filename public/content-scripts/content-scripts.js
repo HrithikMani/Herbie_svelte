@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           i=i+1;
           const action = item.code[0]; // e.g., "type" or "click"
           const value = action === "type" ? item.code[1].replace(/"/g, "") : null; // Extract the value if action is "type"
-          const xpath = item.code[item.code.indexOf("in") + 1].replace(/"/g, ""); // Extract the XPath
+          const xpath = item.code[item.code.indexOf("in") + 1]; // Extract the XPath
           const delay = item.timeout || 1000; // Use the timeout from the command or default to 1000ms
 
           console.log(`Executing action: ${action}, Value: ${value}, XPath: ${xpath}, Delay: ${delay}`);
