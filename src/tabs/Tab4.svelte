@@ -94,6 +94,19 @@
       });
     });
   };
+  const updateKeyword = (index, field, value) => {
+  chrome.storage.local.get({ globalKeywords: [] }, (result) => {
+    const updatedKeywords = [...(result.globalKeywords || [])];
+    if (updatedKeywords[index]) {
+      updatedKeywords[index][field] = value; // Update the specific field
+    }
+    chrome.storage.local.set({ globalKeywords: updatedKeywords }, () => {
+      globalKeywords = updatedKeywords; // Update the local state
+      console.log(`Keyword updated: ${field} = ${value}`);
+    });
+  });
+};
+
 </script>
 
 <div id="tab4" class="tab-content active">
@@ -166,15 +179,21 @@
               class="keyword-details"
               style="display: none;"
             >
-              <textarea class="xpath" bind:value={keyword.xpath}></textarea>
-              <label>
-                <input
-                  type="checkbox"
-                  class="has-variable"
-                  bind:checked={keyword.hasVariable}
-                />
-                Has Variable
-              </label>
+            <textarea
+            class="xpath"
+            bind:value={keyword.xpath}
+            on:input={() => updateKeyword(index, 'xpath', keyword.xpath)}
+          ></textarea>
+          <label>
+            <input
+              type="checkbox"
+              class="has-variable"
+              bind:checked={keyword.hasVariable}
+              on:change={() => updateKeyword(index, 'hasVariable', keyword.hasVariable)}
+            />
+            Has Variable
+          </label>
+          
             </div>
           </li>
         {/each}

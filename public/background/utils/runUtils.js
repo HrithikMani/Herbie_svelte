@@ -14,7 +14,7 @@ export async function handleExecuteScript(scriptContent, sendResponse) {
             // Send message to content script
             chrome.tabs.sendMessage(
                 activeTabId,
-                { action: 'executeCommand', data: result, line: 0 },
+                { action: 'executeCommandFrom', data: result, line: 0 },
                 (response) => {
                     if (chrome.runtime.lastError) {
                         console.error("Error sending message to content script:", chrome.runtime.lastError.message);
@@ -31,6 +31,5 @@ export async function handleExecuteScript(scriptContent, sendResponse) {
         }
     });
 
-    // Keep the message channel open for async response
-    return true;
+    return result;
 }

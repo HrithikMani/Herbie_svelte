@@ -1,54 +1,59 @@
 console.log("Content scripts loaded");
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "executeCommand") {
-    console.log("From content scripts: execute command received");
+  if (message.action === "executeCommandFrom") {
     console.log("Executing commands:", message.data);
 
     const test = message.data;
-    console.log(test);
+    const startLine = message.line || 0; // Default to 0 if message.line is not provided
+
+    if (!Array.isArray(test) || test.length === 0) {
+      sendResponse({ status: 'error', message: 'No valid commands to execute' });
+      return;
+    }
+
     (async () => {
       try {
-        var i=0;
-        for (const item of test) {
-          i=i+1;
-          const action = item.code[0]; // e.g., "type" or "click"
-          const value = action === "type" ? item.code[1].replace(/"/g, "") : null; // Extract the value if action is "type"
-          const xpath = item.code[item.code.indexOf("in") + 1]; // Extract the XPath
-          const delay = item.timeout || 1000; // Use the timeout from the command or default to 1000ms
-
+        for (let i = startLine; i < test.length; i++) {
+          const item = test[i];
+          const action = item.code[0]; // Action type (e.g., "type", "click")
+          const value = action === "type" ? item.code[1].replace(/"/g, "") : null; // Value to type
+          const xpath = item.code[item.code.indexOf("in") + 1]; // Extract XPath
+          const delay = item.timeout || 1000; // Default delay
+        var element =null
           console.log(`Executing action: ${action}, Value: ${value}, XPath: ${xpath}, Delay: ${delay}`);
-
-          const element = await find_element(xpath); // Find element using XPath
+          if(action !=="wait"){
+          element=await find_element(xpath);
           if (!element) {
             console.error(`Element not found for XPath: ${xpath}`);
             sendResponse({ status: 'error', message: `Element not found for XPath: ${xpath}` });
-            return;
           }
+          }
+          await execute(action, element, delay, value);
 
-          await execute(action, element, delay, value); 
+          // Update progress in the background script
+          chrome.runtime.sendMessage(
+            {
+              action: "updateProgress",
+              data: { line: i + 1, total: test.length }, // Line starts from 1 for progress
+            },
+            (response) => {
+              console.log("Response from background script (progress):", response);
+            }
+          );
 
-              chrome.runtime.sendMessage(
-                  {
-                    action: "updateProgress",
-                    data: {line:i,total:test.length},
-                  },
-                  (response) => {
-                    console.log("Response from background script:", response);
-                  }
-                );
-                
-                chrome.runtime.sendMessage(
-                  {
-                    action: "updateLog",
-                    data: {line:i,desc:"Performed "+action+"' on "+xpath},
-                  },
-                  (response) => {
-                    console.log("Response from background script:", response);
-                  }
-                );
+          // Update logs in the background script
+          chrome.runtime.sendMessage(
+            {
+              action: "updateLog",
+              data: { line: i + 1, desc: `Performed '${action}' on '${xpath}'` },
+            },
+            (response) => {
+              console.log("Response from background script (logs):", response);
+            }
+          );
         }
 
+        // Notify that the execution was successful
         sendResponse({ status: 'success', message: 'Commands executed successfully!' });
       } catch (error) {
         console.error("Error during execution:", error);
@@ -56,7 +61,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     })();
 
-    return true; // Keep the message channel open for async response
+    return true; // Keep the message channel open for async operations
   }
 });
 
