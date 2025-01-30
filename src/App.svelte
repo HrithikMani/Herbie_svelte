@@ -7,6 +7,7 @@
 	import Tab4 from './tabs/Tab4.svelte';
 	import Tab5 from './tabs/Tab5.svelte';
 	import Tab6 from './tabs/Tab6.svelte';
+    import Tab7 from './tabs/Tab7.svelte';
   
 	let activeTab = 'tab1'; // Default active tab
   
@@ -17,7 +18,8 @@
 	  tab3: Tab3,
 	  tab4: Tab4,
 	  tab5: Tab5,
-	  tab6: Tab6
+	  tab6: Tab6,
+	  tab7:Tab7
 	};
   
 	// Reactive assignment to update CurrentTab

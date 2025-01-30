@@ -1,7 +1,7 @@
 import { handleParseLine, handleParseScript } from './utils/parseUtils.js';
 import {handleRunScript,handleExecuteScript} from './utils/runUtils.js';
 
-let line = 10;
+let line = 0;
 let cmdtree= null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'parseLine') {
@@ -61,39 +61,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 
+
+
+
+
+
+
+
+
 chrome.webNavigation.onDOMContentLoaded.addListener((details) => {
   console.log("\nNavigating to :" + details.url + "\n");
-
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length > 0 && tabs[0].id) {  // Ensure the tab object is valid
-          sendMessageWithRetry(tabs[0].id, cmdtree, line); // Pass the tab ID, not the whole tab object
-      }
-  });
+ console.log(line)
 });
 
-function sendMessageWithRetry(tabId, data, line, retries = 5) {
-  if (retries <= 0) {
-    console.error('Exceeded maximum retries. Stopping message attempts.');
-    return;
-  }
+// function sendMessageWithRetry(tabId, data, line, retries = 3) {
 
-  console.log(`Sending message to tabId: ${tabId}, line: ${line + 1}, retries left: ${retries}`);
+//   debugger;
+//   if (retries <= 0) {
+//     console.error('Exceeded maximum retries. Stopping message attempts.');
+//     return;
+//   }
 
-  chrome.tabs.sendMessage(tabId, { 
-      action: 'executeCommandFrom', 
-      data: data, 
-      line: line 
-    }, 
-    (response) => {
-      if (chrome.runtime.lastError || !response) {
-        console.log(`Retry ${6 - retries}: Failed to send message, retrying...\n`);
-        setTimeout(() => {
-          sendMessageWithRetry(tabId, data, line, retries - 1);
-        }, 500); // Wait 500ms before retrying
-      } else {
-        console.log('Response from content script:', response);
-      }
-    }
-  );
-}
+  
 
+//   chrome.tabs.sendMessage(
+//     tabId,
+//     { action: 'executeCommandFrom', data: data, line: line },
+//     (response) => {
+//       if (chrome.runtime.lastError || !response) {
+//         console.warn(`Retry ${6 - retries}: Failed to send message, retrying...`);
+//         setTimeout(() => {
+//           sendMessageWithRetry(tabId, data, line, retries - 1);
+//         }, 500); 
+//       } else {
+//         console.log('Response from content script:', response);
+//         return;
+//       }
+//     }
+//   );
+// }

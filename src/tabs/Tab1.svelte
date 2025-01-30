@@ -11,6 +11,12 @@
     chrome.storage.local.get("herbie_script", (result) => {
       scriptContent = result.herbie_script || ""; // Set saved content or default to an empty string
     });
+    chrome.storage.local.get(["herbiestop"], (result) => {
+   
+      if (result.herbiestop === undefined) {
+      chrome.storage.local.set({ herbiestop: false });
+      }
+  });
     // Subscribe to progress updates
     EventEmitter.on("progressUpdate", (value) => {
       progress = value; // Update the progress bar
@@ -73,6 +79,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
   function handleHerbieRun() {
+    chrome.storage.local.set({ herbiestop: false });
     EventEmitter.emit("progressUpdate", 0);
   const scriptContent = document.getElementById('herbie_script').value;
   logs=[];
@@ -106,6 +113,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   function handleClearButton(){
     logs = [];
   }
+  function handleHerbieStop() {
+  chrome.storage.local.set({ herbiestop: true }, () => {
+    console.log("Herbie stopped, herbiestop set to true.");
+  });
+}
 
 </script>
 
@@ -133,6 +145,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         on:click={handleHerbieRun}
       >
         <i class="fas fa-play"></i>
+      </button>
+      <!-- Herbie Stop Button -->
+      <button
+        id="herbie_stop"
+        title="Stop"
+        class="stop-button"
+        aria-label="Stop Herbie"
+        on:click={handleHerbieStop}
+      >
+        <i class="fas fa-stop"></i>
       </button>
 
       <button
@@ -230,6 +252,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   background-color: var(--primary-dark, #0056b3); /* Fallback */
   box-shadow: var(--shadow-base-dark, 0px 4px 6px rgba(0, 0, 0, 0.2));
 }
+#herbie_stop{
+  background-color: #d9534f;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
 </style>
 
 

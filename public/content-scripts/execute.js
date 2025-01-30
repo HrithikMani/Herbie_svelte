@@ -1,4 +1,5 @@
 async function execute(operation, element, delay, value = null) {
+ 
     return new Promise((resolve) => {
         if (operation === 'wait') {
             delay = element;
