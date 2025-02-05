@@ -48,6 +48,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         line = message.data.line
     sendResponse({ status: "Message relayed to popup" });
   }
+
+  if(message.action === 'executeScriptFromInject'){
+    console.log("Hi frominjected herbie")
+    sendResponse({ status: "Hi from bg" });
+  }
+  return true; 
 });
 
 
@@ -100,3 +106,17 @@ chrome.webNavigation.onDOMContentLoaded.addListener((details) => {
 //     }
 //   );
 // }
+// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+//   console.log("Received message in background:", message);
+
+//   if (message.action === 'executeScriptFromInject') {
+//       console.log("Executing script:", message.payload);
+
+//       // Simulate processing
+//       setTimeout(() => {
+//           sendResponse({ status: "Script executed successfully" });
+//       }, 1000); // Delay response to prevent early closure
+//   }
+
+//   return true; // Keep message port open for async response
+// });

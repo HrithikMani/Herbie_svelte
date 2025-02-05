@@ -1,0 +1,192 @@
+/* Root container */
+#injected-root {
+    position: fixed;
+    background: #fff;
+    color: #333;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 5px 12px rgba(0, 0, 0, 0.2);
+    z-index: 999999;
+    width: 420px;
+    font-family: Arial, sans-serif;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+}
+
+/* Header Section */
+#herbie_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ddd;
+    cursor: grab;
+}
+
+#herbie_header img {
+    height: 30px;
+}
+
+#herbie_title {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Close Button */
+.close-button {
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.close-button:hover {
+    background: #cc0000;
+}
+
+/* Control Buttons */
+#herbie_buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.run-button, .stop-button, .save-button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    width: 100px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.run-button { background: #4CAF50; color: white; }
+.stop-button { background: #f44336; color: white; }
+.save-button { background: #FFC107; color: white; }
+
+.run-button:hover { background: #388E3C; }
+.stop-button:hover { background: #D32F2F; }
+.save-button:hover { background: #FFA000; }
+
+/* Progress Bar */
+.progress-container {
+    width: 100%;
+    background-color: #eee;
+    border-radius: 4px;
+    margin: 15px 0;
+    height: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: var(--progressWidth, 0%);
+    height: 100%;
+    background-color: #4CAF50;
+    border-radius: 4px;
+    transition: width 0.3s ease-in-out;
+}
+
+/* Input Fields */
+.herbie_script, .herbie_bar {
+    margin-top: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.herbie_script label, .herbie_bar label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.herbie_script textarea, #herbie_command {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-family: monospace;
+    background: #f9f9f9;
+    color: #333;
+    resize: vertical;
+    box-sizing: border-box;
+    display: block;
+    transition: all 0.2s ease;
+}
+
+#herbie_command {
+    background: white;
+}
+
+/* Focus Effect */
+.herbie_script textarea:focus, #herbie_command:focus {
+    border-color: #007BFF;
+    outline: none;
+    box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Button Section */
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.button {
+    padding: 10px 15px;
+    background: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 23%;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.button:hover {
+    background: #0056b3;
+}
+
+/* Logs Section */
+#log-section {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    font-size: 13px;
+    color: #555;
+    text-align: center;
+}
+
+#herbie_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ddd;
+    cursor: grab; /* 🟢 Shows draggable cursor */
+}
+
+#herbie_header:active {
+    cursor: grabbing; /* 🔵 Changes to grabbing while dragging */
+}

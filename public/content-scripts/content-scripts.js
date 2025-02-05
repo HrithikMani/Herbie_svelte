@@ -44,14 +44,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function executeCommands(startLine, cmdtree) {
   for (let i = startLine; i < cmdtree.length; i++) {
-    chrome.storage.local.get({herbiestop:false},(a)=>{
-      if(a.herbiestop==true){
-        console.log("Stoping the test case")
-        return;
-      }
-  
-     
-    })
+
+     // Properly await retrieving storage value
+     const storageData = await new Promise((resolve) => {
+      chrome.storage.local.get({ herbiestop: false }, (data) => resolve(data.herbiestop));
+    });
+
+    // If herbiestop is true, break the loop to stop execution
+    if (storageData) {
+      console.log("Stopping the test case as herbiestop is set to true.");
+      return;
+    }
     const item = cmdtree[i];
     const action = item.code[0]; // Action type (e.g., "type", "click")
     const value = action === "type" ? item.code[1].replace(/"/g, "") : null; // Value to type
