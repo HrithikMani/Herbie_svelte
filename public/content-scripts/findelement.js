@@ -52,7 +52,7 @@ async function find_element(desc, retries = 5, delay = 1000) {
 
             // Search for buttons and links containing the description
             el = Array.from(document.querySelectorAll('button, a')).find(element =>
-                element.textContent.trim().toLowerCase().includes(normalizedDesc)
+                element.textContent.trim().includes(normalizedDesc)
             );
             if (el) {
                 console.log(`Found element using button or link text:`, el);
