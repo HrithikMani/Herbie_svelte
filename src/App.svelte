@@ -32,10 +32,10 @@
   
 	<!-- Dynamically render the selected tab with a wrapper for the transition -->
 	{#if CurrentTab}
-	  <div transition:fade>
-		<svelte:component this={CurrentTab} />
-	  </div>
-	{/if}
+  <div transition:fade>
+    <svelte:component this={CurrentTab} bind:activeTab />
+  </div>
+{/if}
   </div>
   
 

@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import EventEmitter from "../utils/EventEmitter.js"; // Use your event emitter utility
   import LogComponent from '../components/LogComponent.svelte'; // Import LogComponent
-
+  export let activeTab;
   let progress = 0;
   let logs = [];
   let scriptContent = "";
@@ -117,7 +117,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   chrome.storage.local.set({ herbiestop: true }, () => {
     console.log("Herbie stopped, herbiestop set to true.");
   });
-}
+  }
+  function handleHerbieSave() {
+    // We'll store the current scriptContent in an array of saved scripts
+    // Each script can have a title & the script content
+    chrome.storage.local.get(["savedScripts"], (result) => {
+      let allScripts = result.savedScripts || [];
+
+      // Push a new script object (title + content)
+      const newScript = {
+        title: `Test Script ${new Date().toLocaleTimeString()}`,
+        content: scriptContent
+      };
+
+      allScripts.push(newScript);
+
+      // Save back to Chrome storage
+      chrome.storage.local.set({ savedScripts: allScripts }, () => {
+        console.log("Script saved to 'savedScripts' in Chrome storage:", newScript);
+      });
+    });
+  }
 
 </script>
 
@@ -162,6 +182,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         title="Add to Saved Scripts"
         class="save-button"
         aria-label="Save Herbie"
+        on:click={handleHerbieSave}
       >
         <i class="fas fa-save"></i>
         <i class="fas fa-check"></i>
