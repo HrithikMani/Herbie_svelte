@@ -66,8 +66,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Received message from content script:", message);
 
+  if (message.action === "buttonClick") {
+      // Store button click in Chrome storage
+      chrome.storage.local.set({ lastClicked: message.buttonId }, () => {
+          console.log(`Stored button click: ${message.buttonId}`);
+      });
 
+      sendResponse({ action: "updateLastClicked", buttonId: message.buttonId });
+  } 
+  else if (message.action === "getLastClicked") {
+      // Retrieve last clicked button from storage
+      chrome.storage.local.get("lastClicked", (data) => {
+          sendResponse({ action: "updateLastClicked", buttonId: data.lastClicked || "None" });
+      });
+
+      return true; // Indicate async response
+  }
+});
 
 
 

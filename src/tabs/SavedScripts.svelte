@@ -8,12 +8,20 @@
 
   // On mount, load them from Chrome storage
   onMount(() => {
-    chrome.storage.local.get(['savedScripts'], (result) => {
-      if (result.savedScripts) {
-        savedScripts = result.savedScripts;
-      }
-    });
+  chrome.storage.local.get(["savedScripts"], (result) => {
+    if (result.savedScripts) {
+      // Sort them descending by timestamp if present
+      // Only if your old scripts also have a `timestamp`, or you handle missing timestamps gracefully.
+      savedScripts = result.savedScripts.sort((a, b) => {
+        // Fallback if timestamp is missing (e.g. older scripts), treat it as 0
+        const tA = a.timestamp || 0;
+        const tB = b.timestamp || 0;
+        return tB - tA;
+      });
+    }
   });
+});
+
 
   // Called whenever we want to persist savedScripts to storage
   function saveToStorage() {
@@ -52,9 +60,10 @@
       const fileContent = e.target.result;
       const newScript = {
         title: `Imported Script (${file.name})`,
-        content: fileContent
+        content: fileContent,
+        timestamp: Date.now() 
       };
-      savedScripts = [...savedScripts, newScript];
+      savedScripts = [newScript,...savedScripts];
       saveToStorage();
     };
     reader.readAsText(file);

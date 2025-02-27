@@ -119,25 +119,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   });
   }
   function handleHerbieSave() {
-    // We'll store the current scriptContent in an array of saved scripts
-    // Each script can have a title & the script content
-    chrome.storage.local.get(["savedScripts"], (result) => {
-      let allScripts = result.savedScripts || [];
+  // We'll store the current scriptContent in an array of saved scripts
+  chrome.storage.local.get(["savedScripts"], (result) => {
+    let allScripts = result.savedScripts || [];
 
-      // Push a new script object (title + content)
-      const newScript = {
-        title: `Test Script ${new Date().toLocaleTimeString()}`,
-        content: scriptContent
-      };
+    // Create a new script object with a timestamp
+    const newScript = {
+      title: `Test Script ${new Date().toLocaleTimeString()}`,
+      content: scriptContent,
+      timestamp: Date.now() // or new Date().getTime()
+    };
 
-      allScripts.push(newScript);
+    // Add the new script to the array
+    allScripts.push(newScript);
 
-      // Save back to Chrome storage
-      chrome.storage.local.set({ savedScripts: allScripts }, () => {
-        console.log("Script saved to 'savedScripts' in Chrome storage:", newScript);
-      });
+    // Sort in descending order by timestamp (newest first)
+    allScripts.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Save back to Chrome storage
+    chrome.storage.local.set({ savedScripts: allScripts }, () => {
+      console.log("Script saved to 'savedScripts':", newScript);
+      
+      // Switch to "Saved Scripts" tab
+      activeTab = "tab3";
     });
-  }
+  });
+}
+
+function handleHerbieAdd(){
+  var  herbieCommand = document.getElementById("herbie_command");
+  scriptContent = scriptContent + '\n' + herbieCommand.value;
+  herbieCommand.value = "";
+}
 
 </script>
 
@@ -220,7 +233,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         aria-label="Herbie Command Input"
       />
       <div class="button-container">
-        <button id="herbie_add" class="button" aria-label="Add Command">
+        <button id="herbie_add" class="button" aria-label="Add Command" on:click={handleHerbieAdd} >
           <i class="fas fa-plus"></i> Add
         </button>
         <button id="herbie_parse" class="button" aria-label="Parse Command"     on:click={handleParseCommand}>

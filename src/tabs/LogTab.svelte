@@ -1,6 +1,4 @@
-<script>
-   export let activeTab;
-</script>
+
 <div id="tab2" class="tab-content active">
   <div class="log-header-container">
       <h2>Logs</h2>

@@ -57,7 +57,7 @@ async function executeCommands(startLine, cmdtree) {
     }
     const item = cmdtree[i];
     const action = item.code[0]; // Action type (e.g., "type", "click")
-    const value = action === "type" ? item.code[1].replace(/"/g, "") : null; // Value to type
+    const value = (action === "type" || action === "select")? item.code[1].replace(/"/g, "") : null; // Value to type
     const xpath = item.code[item.code.indexOf("in") + 1]; // Extract XPath
     const delay = item.timeout || 1000; // Default delay
     let element = null;
@@ -99,4 +99,21 @@ async function executeCommands(startLine, cmdtree) {
     );
   }
 }
+
+window.addEventListener("message", (event) => {
+  // Ignore messages that are not from the same window or marked as from the extension
+  if (event.source !== window || !event.data || event.data.fromExtension) return;
+
+  console.log("Received message from webpage:", event.data);
+
+  // Forward the message to the background script
+  chrome.runtime.sendMessage(event.data, (response) => {
+      if (response && response.action === "updateLastClicked") {
+          // Send the last clicked button back to the webpage
+          window.postMessage({ action: "updateLastClicked", buttonId: response.buttonId, fromExtension: true }, "*");
+      }
+  });
+});
+
+
 

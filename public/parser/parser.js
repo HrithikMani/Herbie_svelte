@@ -96,6 +96,7 @@ async function parseStatement(stmt, cmd) {
                 case 'verify':
                     cmd.code.push('verify');
                 case 'select':
+                    console.log(cmd);
                     cmd.code.push('select');
             }
         }

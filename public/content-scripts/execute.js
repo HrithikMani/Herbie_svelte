@@ -1,5 +1,7 @@
 async function execute(operation, element, delay, value = null) {
- 
+    if(value){
+        value = value.replace(/^'|'$/g, '');
+    }
     return new Promise((resolve) => {
         if (operation === 'wait') {
             delay = element;
@@ -27,9 +29,7 @@ async function execute(operation, element, delay, value = null) {
                         if (value !== null && value !== undefined) {
                             console.log(`Entering "${value}" into the element`);
                             console.log(element);
-                            simulijs.simulateFocus(element, function () {
-                                simulijs.simulateKeyPress(element, value);
-                            });
+                            simulijs.simulateTyping(element,value);
                         } else {
                             console.error(
                                 `Value is required for '${operation}' operation.`
@@ -55,6 +55,28 @@ async function execute(operation, element, delay, value = null) {
                     // Placeholder for future functionality
                     console.log("Verification logic will be implemented later.");
                     break;
+
+                case 'select':
+                    if (element) {
+                        if (value !== null && value !== undefined) {
+                            console.log(`Selecting "${value}" into the element`);
+                            console.log(element);
+                            simulijs.simulateFocus(element, () => {
+                                simulijs.simulateChange(element,value, () => {
+                                  console.log("Change event simulated with value:", value);
+                                });
+                              });
+                        } else {
+                            console.error(
+                                `Value is required for '${operation}' operation.`
+                            );
+                        }
+                    } else {
+                        console.error(
+                            "Element is required for 'press' or 'type' operation."
+                        );
+                    }
+                    break
 
                 default:
                     console.error(`Unknown operation: ${operation}`);
