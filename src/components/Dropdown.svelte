@@ -5,7 +5,7 @@
     { id: 'tab1', label: 'Herbie' },
     { id: 'tab3', label: 'Saved Scripts' },
     { id: 'tab4', label: 'Keywords' },
-    // { id: 'tab5', label: 'Record' },
+    { id: 'tab5', label: 'Record' },
     { id: 'tab6', label: 'Usability Testing' },
     { id: 'tab2', label: 'Logs' },
     // { id: 'tab7', label: 'Inject Herbie' },

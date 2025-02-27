@@ -151,6 +151,28 @@ function handleHerbieAdd(){
   scriptContent = scriptContent + '\n' + herbieCommand.value;
   herbieCommand.value = "";
 }
+function saveLogs(logEntries) {
+    if (!logEntries || logEntries.length === 0) {
+        console.warn("No logs to save.");
+        return;
+    }
+
+    const newLogEntry = {
+        timestamp: new Date().toLocaleString(),
+        entries: logEntries, // Pass the log entries directly
+    };
+
+    chrome.storage.local.get({ logs: [] }, (result) => {
+        let savedLogs = result.logs || [];
+        savedLogs.push(newLogEntry);
+
+        chrome.storage.local.set({ logs: savedLogs }, () => {
+            console.log("Logs saved successfully!");
+        });
+    });
+    logs = [];
+}
+
 
 </script>
 
@@ -242,7 +264,7 @@ function handleHerbieAdd(){
         <button id="herbie_clear" class="button" aria-label="Clear Command" on:click={handleClearButton}>
           <i class="fas fa-trash-alt"></i> Clear
         </button>
-        <button id="herbie_save_logs" class="button" aria-label="Save Command">
+        <button id="herbie_save_logs" class="button" aria-label="Save Command" on:click={saveLogs(logs)}>
           <i class="fas fa-save"></i> Save
         </button>
       </div>
