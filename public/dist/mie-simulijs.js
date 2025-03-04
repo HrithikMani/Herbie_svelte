@@ -51,21 +51,42 @@
     }, delay);
   }
 
-  function simulateKeyDown(keyCode, callback, delay = DEFAULT_DELAY) {
+  function simulateKeyDown(element, key, callback, delay = DEFAULT_DELAY) {
     setTimeout(() => {
       const event = new KeyboardEvent('keydown', {
         bubbles: true,
         cancelable: true,
-        view: DEFAULT_VIEW,
-        keyCode: keyCode
+        view: window, // Use `window` for default view
+        key: key,     // The key character
       });
-      document.dispatchEvent(event);
-
+  
+      // Set keyCode manually if needed
+      Object.defineProperty(event, 'keyCode', {
+        get: () => key.charCodeAt(0),
+      });
+  
+      // Dispatch on the specific element
+      element.dispatchEvent(event);
+  
       if (typeof callback === 'function') {
         callback();
       }
     }, delay);
   }
+  
+
+  function simulateTyping(element, text, delay = 100, callback) {
+  
+    element.focus();
+    element.value = ''; // Clear existing value
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.value = text;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    element.blur();
+        
+  }
+
+
 
   function simulateKeyUp(keyCode, callback, delay = DEFAULT_DELAY) {
     setTimeout(() => {
@@ -128,8 +149,9 @@
     }, delay);
   }
 
-  function simulateChange(element, callback, delay = DEFAULT_DELAY) {
+  function simulateChange(element,value, callback, delay = DEFAULT_DELAY) {
     setTimeout(() => {
+      element.value = value;
       const event = new Event('change', {
         bubbles: true,
         cancelable: true,
@@ -161,6 +183,7 @@
     simulateMouseLeave,
     simulateFocus,
     simulateChange,
-    simulationSelector
+    simulationSelector,
+    simulateTyping
   };
 })(window);

@@ -5,9 +5,9 @@
             "type",
             "\"Hrithik\"",
             "in",
-            "\"firstname\""
+            "\"lastname\""
         ],
-        "src": "type \"Hrithik\" into \"firstname\"",
+        "src": "type \"Hrithik\" into \"lastname\"",
         "timeout": 5000,
         "subcommands": []
     },
@@ -17,9 +17,9 @@
             "type",
             "\"Mani\"",
             "in",
-            "\"lastname\""
+            "\"firstname\""
         ],
-        "src": "type \"Mani\" into \"lastname\"",
+        "src": "type \"Mani\" into \"firstname\"",
         "timeout": 5000,
         "subcommands": []
     },

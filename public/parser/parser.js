@@ -23,7 +23,7 @@ async function ParseScript(script) {
     // Create an array of promises for each line parsing
     let promises = lines.map(async (line, i) => {
         var indentLevel = line.search(/\S|$/); // Find the indentation level
-        var cmd = { line: i, code: [], src: line.trim(), timeout: 5000, subcommands: [] };
+        var cmd = { line: i, code: [], src: line.trim(), timeout: 3000, subcommands: [] };
 
         var stmt = line.trim().match(/\w+|'[^']+'|"[^"]+"|\{\{(.*?)\}\}|\*|:/g); // tokenize line
         if (stmt) {
@@ -96,6 +96,7 @@ async function parseStatement(stmt, cmd) {
                 case 'verify':
                     cmd.code.push('verify');
                 case 'select':
+                    console.log(cmd);
                     cmd.code.push('select');
             }
         }
@@ -139,7 +140,7 @@ async function parseStatement(stmt, cmd) {
             const relevantVariables = (cmd.code[0]==("type") || cmd.code[0]==("verify") || cmd.code[0]==("select")) ? variables.slice(1) : variables;
             
             relevantVariables.forEach(variable => {
-                updatedXpath = updatedXpath.replace('{$}', variable);
+                updatedXpath = updatedXpath.replace('{$}', "'"+variable+"'");
             });
 
             var inclause = cmd.code.indexOf("in");

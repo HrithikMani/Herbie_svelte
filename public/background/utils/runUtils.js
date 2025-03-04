@@ -5,14 +5,16 @@ export async function handleRunScript(scriptContent, sendResponse) {
 }
 
 export async function handleExecuteScript(scriptContent, sendResponse) {
+    const result = await ParseScript(scriptContent);
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs.length > 0 && tabs[0].id) {
             const activeTabId = tabs[0].id;
-
+              // Pass the entire script to ParseScript
+           
             // Send message to content script
             chrome.tabs.sendMessage(
                 activeTabId,
-                { action: 'executeCommand', data: scriptContent, line: 0 },
+                { action: 'executeCommandFrom', data: result, line: 0 },
                 (response) => {
                     if (chrome.runtime.lastError) {
                         console.error("Error sending message to content script:", chrome.runtime.lastError.message);
@@ -29,6 +31,5 @@ export async function handleExecuteScript(scriptContent, sendResponse) {
         }
     });
 
-    // Keep the message channel open for async response
-    return true;
+    return result;
 }

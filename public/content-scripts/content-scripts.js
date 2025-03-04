@@ -1,20 +1,119 @@
-
-
 console.log("Content scripts loaded");
+
+chrome.storage.local.get({ herbiecmdtree:[],herbiestartline:0 }, (result) => {
+  console.log("retriving  herbiecmd tree in chrome storage")
+  console.log(result.herbiecmdtree)
+  console.log(result.herbiestartline);
+ 
+  if(result.herbiestartline < result.herbiecmdtree.length){
+    executeCommands(result.herbiestartline+1, result.herbiecmdtree)
+  }
+  
+})
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "executeCommand") {
-      console.log("From content scripts: execute command received");
-      console.log("Executing command:", message.data);
+  if (message.action === "executeCommandFrom") {
+    sendResponse({ status: 'success', message: 'Commands received' });
+    console.log("Executing commands:", message.data);
 
-      const element = document.getElementById("test-button");
-      // Call the execute function
-      (async () => {
-          await execute("click", element, 1000);
-      })();
+    const cmdtree = message.data;
+    const startLine = message.line || 0; // Default to 0 if message.line is not provided
 
-      sendResponse({ status: 'success', message: 'Command executed successfully!' });
+    chrome.storage.local.set({ herbiecmdtree: cmdtree, herbiestartline: startLine }, () => {
+      console.log("Stored cmdtree in Chrome storage");
+    });
 
-      // Return true to keep the message channel open
-      return true;
+    if (!Array.isArray(cmdtree) || cmdtree.length === 0) {
+      chrome.runtime.sendMessage({ status: 'error', message: 'No valid commands to execute' });
+      return;
+    }
+
+    executeCommands(startLine, cmdtree)
+      .then(() => {
+        chrome.runtime.sendMessage({ status: 'success', message: 'Execution completed successfully' });
+      })
+      .catch((error) => {
+        console.error("Error during execution:", error);
+        chrome.runtime.sendMessage({ status: 'error', message: error.message });
+      });
+
+    return true; // Keep the message channel open for async operations
   }
 });
+
+
+async function executeCommands(startLine, cmdtree) {
+  for (let i = startLine; i < cmdtree.length; i++) {
+
+     // Properly await retrieving storage value
+     const storageData = await new Promise((resolve) => {
+      chrome.storage.local.get({ herbiestop: false }, (data) => resolve(data.herbiestop));
+    });
+
+    // If herbiestop is true, break the loop to stop execution
+    if (storageData) {
+      console.log("Stopping the test case as herbiestop is set to true.");
+      return;
+    }
+    const item = cmdtree[i];
+    const action = item.code[0]; // Action type (e.g., "type", "click")
+    const value = (action === "type" || action === "select")? item.code[1].replace(/"/g, "") : null; // Value to type
+    const xpath = item.code[item.code.indexOf("in") + 1]; // Extract XPath
+    const delay = item.timeout || 1000; // Default delay
+    let element = null;
+
+    console.log(`Executing action: ${action}, Value: ${value}, XPath: ${xpath}, Delay: ${delay}`);
+
+    if (action !== "wait") {
+      element = await find_element(xpath);
+      if (!element) {
+        console.error(`Element not found for XPath: ${xpath}`);
+        chrome.runtime.sendMessage({ status: 'error', message: `Element not found for XPath: ${xpath}` });
+        throw new Error(`Element not found for XPath: ${xpath}`);
+      }
+    }
+
+    await execute(action, element, delay, value);
+    chrome.storage.local.set({ herbiestartline: i });
+
+    // Update progress in the background script
+    chrome.runtime.sendMessage(
+      {
+        action: "updateProgress",
+        data: { line: i + 1, total: cmdtree.length }, // Line starts from 1 for progress
+      },
+      (response) => {
+        console.log("Response from background script (progress):", response);
+      }
+    );
+
+    // Update logs in the background script
+    chrome.runtime.sendMessage(
+      {
+        action: "updateLog",
+        data: { line: i + 1, desc: `Performed '${action}' on '${xpath}'` },
+      },
+      (response) => {
+        console.log("Response from background script (logs):", response);
+      }
+    );
+  }
+}
+
+window.addEventListener("message", (event) => {
+  // Ignore messages that are not from the same window or marked as from the extension
+  if (event.source !== window || !event.data || event.data.fromExtension) return;
+
+  console.log("Received message from webpage:", event.data);
+
+  // Forward the message to the background script
+  chrome.runtime.sendMessage(event.data, (response) => {
+      if (response && response.action === "updateLastClicked") {
+          // Send the last clicked button back to the webpage
+          window.postMessage({ action: "updateLastClicked", buttonId: response.buttonId, fromExtension: true }, "*");
+      }
+  });
+});
+
+
+

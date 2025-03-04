@@ -2,12 +2,21 @@
   import { onMount } from "svelte";
   import EventEmitter from "../utils/EventEmitter.js"; // Use your event emitter utility
   import LogComponent from '../components/LogComponent.svelte'; // Import LogComponent
-
+  export let activeTab;
   let progress = 0;
   let logs = [];
-
+  let scriptContent = "";
   // Handle event subscriptions on mount
   onMount(() => {
+    chrome.storage.local.get("herbie_script", (result) => {
+      scriptContent = result.herbie_script || ""; // Set saved content or default to an empty string
+    });
+    chrome.storage.local.get(["herbiestop"], (result) => {
+   
+      if (result.herbiestop === undefined) {
+      chrome.storage.local.set({ herbiestop: false });
+      }
+  });
     // Subscribe to progress updates
     EventEmitter.on("progressUpdate", (value) => {
       progress = value; // Update the progress bar
@@ -19,6 +28,34 @@
       logs = [...logs, message]; // Add new log messages
     });
   });
+
+  // Popup script: Listen for messages from the background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "updatePopupProgressBar") {
+    console.log("Message received in popup:", message.data);
+      var value = Math.round((message.data.line/message.data.total)*100)
+    EventEmitter.emit("progressUpdate", value);
+    sendResponse({ status: "Popup updated" });
+  }
+  if (message.action === "updateLogPopup") {
+    console.log("Message received in popup:", message.data);
+    EventEmitter.emit("logEvent", "Line: "+(message.data.line)+", "+message.data.desc);
+    sendResponse({ status: "Popup updated" });
+  }
+});
+
+
+
+
+
+ // Save the script content to Chrome storage when it changes
+ function saveScriptContent() {
+    chrome.storage.local.set({ herbie_script: scriptContent }, () => {
+      console.log("Script content saved to Chrome storage:", scriptContent);
+    });
+  }
+
+
 
   // Simulate progress updates
   function simulateProgress() {
@@ -42,6 +79,8 @@
 
 
   function handleHerbieRun() {
+    chrome.storage.local.set({ herbiestop: false });
+    EventEmitter.emit("progressUpdate", 0);
   const scriptContent = document.getElementById('herbie_script').value;
   logs=[];
   chrome.runtime.sendMessage({
@@ -74,6 +113,66 @@
   function handleClearButton(){
     logs = [];
   }
+  function handleHerbieStop() {
+  chrome.storage.local.set({ herbiestop: true }, () => {
+    console.log("Herbie stopped, herbiestop set to true.");
+  });
+  }
+  function handleHerbieSave() {
+  // We'll store the current scriptContent in an array of saved scripts
+  chrome.storage.local.get(["savedScripts"], (result) => {
+    let allScripts = result.savedScripts || [];
+
+    // Create a new script object with a timestamp
+    const newScript = {
+      title: `Test Script ${new Date().toLocaleTimeString()}`,
+      content: scriptContent,
+      timestamp: Date.now() // or new Date().getTime()
+    };
+
+    // Add the new script to the array
+    allScripts.push(newScript);
+
+    // Sort in descending order by timestamp (newest first)
+    allScripts.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Save back to Chrome storage
+    chrome.storage.local.set({ savedScripts: allScripts }, () => {
+      console.log("Script saved to 'savedScripts':", newScript);
+      
+      // Switch to "Saved Scripts" tab
+      activeTab = "tab3";
+    });
+  });
+}
+
+function handleHerbieAdd(){
+  var  herbieCommand = document.getElementById("herbie_command");
+  scriptContent = scriptContent + '\n' + herbieCommand.value;
+  herbieCommand.value = "";
+}
+function saveLogs(logEntries) {
+    if (!logEntries || logEntries.length === 0) {
+        console.warn("No logs to save.");
+        return;
+    }
+
+    const newLogEntry = {
+        timestamp: new Date().toLocaleString(),
+        entries: logEntries, // Pass the log entries directly
+    };
+
+    chrome.storage.local.get({ logs: [] }, (result) => {
+        let savedLogs = result.logs || [];
+        savedLogs.push(newLogEntry);
+
+        chrome.storage.local.set({ logs: savedLogs }, () => {
+            console.log("Logs saved successfully!");
+        });
+    });
+    logs = [];
+}
+
 
 </script>
 
@@ -102,12 +201,23 @@
       >
         <i class="fas fa-play"></i>
       </button>
+      <!-- Herbie Stop Button -->
+      <button
+        id="herbie_stop"
+        title="Stop"
+        class="stop-button"
+        aria-label="Stop Herbie"
+        on:click={handleHerbieStop}
+      >
+        <i class="fas fa-stop"></i>
+      </button>
 
       <button
         id="herbie_save"
         title="Add to Saved Scripts"
         class="save-button"
         aria-label="Save Herbie"
+        on:click={handleHerbieSave}
       >
         <i class="fas fa-save"></i>
         <i class="fas fa-check"></i>
@@ -123,13 +233,15 @@
     <div class="herbie_script">
       <label class="prompt" for="herbie_script">Script:</label>
       <textarea
-        id="herbie_script"
-        placeholder="Type or load your test scripts here..."
-        name="Script"
-        rows="10"
-        cols="80"
-        aria-label="Herbie Script Area"
-      >click on '#test-button'</textarea>
+      id="herbie_script"
+      bind:value={scriptContent}
+      placeholder="Type or load your test scripts here..."
+      name="Script"
+      rows="10"
+      cols="80"
+      aria-label="Herbie Script Area"
+      on:input={saveScriptContent}
+    ></textarea>
     </div>
 
     <!-- Command Bar -->
@@ -143,7 +255,7 @@
         aria-label="Herbie Command Input"
       />
       <div class="button-container">
-        <button id="herbie_add" class="button" aria-label="Add Command">
+        <button id="herbie_add" class="button" aria-label="Add Command" on:click={handleHerbieAdd} >
           <i class="fas fa-plus"></i> Add
         </button>
         <button id="herbie_parse" class="button" aria-label="Parse Command"     on:click={handleParseCommand}>
@@ -152,7 +264,7 @@
         <button id="herbie_clear" class="button" aria-label="Clear Command" on:click={handleClearButton}>
           <i class="fas fa-trash-alt"></i> Clear
         </button>
-        <button id="herbie_save_logs" class="button" aria-label="Save Command">
+        <button id="herbie_save_logs" class="button" aria-label="Save Command" on:click={saveLogs(logs)}>
           <i class="fas fa-save"></i> Save
         </button>
       </div>
@@ -196,6 +308,16 @@
   background-color: var(--primary-dark, #0056b3); /* Fallback */
   box-shadow: var(--shadow-base-dark, 0px 4px 6px rgba(0, 0, 0, 0.2));
 }
+#herbie_stop{
+  background-color: #d9534f;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
 </style>
 
 
