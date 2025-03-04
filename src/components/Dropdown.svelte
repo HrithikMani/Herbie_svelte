@@ -6,7 +6,7 @@
     { id: 'tab1', label: 'Herbie' },
     { id: 'tab3', label: 'Saved Scripts' },
     { id: 'tab4', label: 'Keywords' },
-    { id: 'tab5', label: 'Record' },
+    // { id: 'tab5', label: 'Record' },
     { id: 'tab6', label: 'Usability Testing' },
     { id: 'tab2', label: 'Logs' },
     // { id: 'tab7', label: 'Inject Herbie' },
@@ -26,6 +26,15 @@
   onMount(() => {
     chrome.storage.local.get("activeTab", (result) => {
       activeTab = result.activeTab || "tab1"; // Default to 'tab1' if no stored tab
+    });
+    chrome.storage.local.get("usabilityTest", (result) => {
+      
+      if(result.usabilityTest.description){
+        activeTab = "tab6";
+      }else{
+        activeTab = result.activeTab || "tab1"; 
+      }
+       
     });
   });
 </script>

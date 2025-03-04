@@ -101,19 +101,17 @@ async function executeCommands(startLine, cmdtree) {
 }
 
 window.addEventListener("message", (event) => {
-  // Ignore messages that are not from the same window or marked as from the extension
-  if (event.source !== window || !event.data || event.data.fromExtension) return;
+  if (event.source !== window || !event.data) return;
 
-  console.log("Received message from webpage:", event.data);
+  if (event.data.action === "startUsabilityTest") {
+      console.log("Forwarding usability test start to background script:", event.data);
 
-  // Forward the message to the background script
-  chrome.runtime.sendMessage(event.data, (response) => {
-      if (response && response.action === "updateLastClicked") {
-          // Send the last clicked button back to the webpage
-          window.postMessage({ action: "updateLastClicked", buttonId: response.buttonId, fromExtension: true }, "*");
-      }
-  });
+      chrome.runtime.sendMessage({
+          action: "startUsabilityTest",
+          taskId: event.data.taskId,
+          taskName: event.data.taskName,
+          description: event.data.description
+      });
+  }
 });
-
-
 
