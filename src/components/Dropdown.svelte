@@ -1,4 +1,5 @@
 <script>
+    import { onMount } from "svelte";
   export let activeTab;
 
   const tabs = [
@@ -20,7 +21,13 @@
   function selectTab(tabId) {
     activeTab = tabId;
     isDropdownVisible = false; // Close dropdown after selection
+    chrome.storage.local.set({ activeTab: tabId });
   }
+  onMount(() => {
+    chrome.storage.local.get("activeTab", (result) => {
+      activeTab = result.activeTab || "tab1"; // Default to 'tab1' if no stored tab
+    });
+  });
 </script>
 
 <div class="dropdown-container">
