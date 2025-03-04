@@ -57,34 +57,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "openPopup") {
-    chrome.action.openPopup(); // This will open the extension's popup
-    sendResponse({ status: "Popup opened" });
-  }
-});
-
-
+//thisi si the logic we use in background inorder to store information related to test case 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Received message from content script:", message);
+  if (message.action === "startUsabilityTest") {
+    const testDetails = {
+        taskId: message.taskId,
+        taskName: message.taskName,
+        description: message.description,
+        status: "in-progress",
+        startTime: Date.now()
+    };
 
-  if (message.action === "buttonClick") {
-      // Store button click in Chrome storage
-      chrome.storage.local.set({ lastClicked: message.buttonId }, () => {
-          console.log(`Stored button click: ${message.buttonId}`);
-      });
+    chrome.storage.local.set({ [`usabilityTest`]: testDetails }, () => {
+        console.log(`Stored usability test: ${message.taskId}`);
+    });
 
-      sendResponse({ action: "updateLastClicked", buttonId: message.buttonId });
-  } 
-  else if (message.action === "getLastClicked") {
-      // Retrieve last clicked button from storage
-      chrome.storage.local.get("lastClicked", (data) => {
-          sendResponse({ action: "updateLastClicked", buttonId: data.lastClicked || "None" });
-      });
+    sendResponse({ status: "success", message: `Usability test started for ${message.taskId}` });
+}
 
-      return true; // Indicate async response
-  }
 });
 
 
@@ -98,43 +90,4 @@ chrome.webNavigation.onDOMContentLoaded.addListener((details) => {
  console.log(line)
 });
 
-// function sendMessageWithRetry(tabId, data, line, retries = 3) {
 
-//   debugger;
-//   if (retries <= 0) {
-//     console.error('Exceeded maximum retries. Stopping message attempts.');
-//     return;
-//   }
-
-  
-
-//   chrome.tabs.sendMessage(
-//     tabId,
-//     { action: 'executeCommandFrom', data: data, line: line },
-//     (response) => {
-//       if (chrome.runtime.lastError || !response) {
-//         console.warn(`Retry ${6 - retries}: Failed to send message, retrying...`);
-//         setTimeout(() => {
-//           sendMessageWithRetry(tabId, data, line, retries - 1);
-//         }, 500); 
-//       } else {
-//         console.log('Response from content script:', response);
-//         return;
-//       }
-//     }
-//   );
-// }
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-//   console.log("Received message in background:", message);
-
-//   if (message.action === 'executeScriptFromInject') {
-//       console.log("Executing script:", message.payload);
-
-//       // Simulate processing
-//       setTimeout(() => {
-//           sendResponse({ status: "Script executed successfully" });
-//       }, 1000); // Delay response to prevent early closure
-//   }
-
-//   return true; // Keep message port open for async response
-// });
