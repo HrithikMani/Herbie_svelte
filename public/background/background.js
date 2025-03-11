@@ -75,12 +75,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
 
     sendResponse({ status: "success", message: `Usability test started for ${message.taskId}` });
-}
+  }
+ 
 
 });
 
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Received message from popup:", message);
 
+  if (message.action === "endUsabilityTest") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          
+
+          chrome.tabs.sendMessage(tabs[0].id, {
+              action: "endUsabilityTest",
+              taskId: message.taskId
+          }, (response) => {
+              console.log("Message forwarded to content script:", response);
+              sendResponse({ status: "success", message: "End test message sent" });
+          });
+      });
+
+      return true; // Keep the message channel open for async operations
+  }
+});
 
 
 
