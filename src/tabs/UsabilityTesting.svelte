@@ -32,15 +32,28 @@
         clearInterval(interval);
     }
   
+    
     function endTest() {
-        if (!isRunning) return;
-        isRunning = false;
-        stopStopwatch();
-  
-        chrome.storage.local.remove(`usabilityTest`, () => {
-            usabilityTest = null;
-        });
+    if (!isRunning) return;
+    isRunning = false;
+    stopStopwatch();
+
+    chrome.runtime.sendMessage({
+        action: "endUsabilityTest",
+        taskId: usabilityTest.taskId
+    }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.error("Error sending message:", chrome.runtime.lastError.message);
+        } else {
+            console.log("Response from background script:", response);
+        }
+    });
+
+    chrome.storage.local.remove("usabilityTest", () => {
+        usabilityTest = null;
+    });
     }
+
   
     function formatTime(ms) {
         const minutes = Math.floor(ms / 60000);

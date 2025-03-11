@@ -113,5 +113,27 @@ window.addEventListener("message", (event) => {
           description: event.data.description
       });
   }
+ 
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Received message from background script:", message);
+
+  if (message.action === "endUsabilityTest") {
+      console.log("Ending usability test...");
+
+      // Directly update the webpage
+      const usabilityTestElement = document.getElementById("usability-test");
+      if (usabilityTestElement) {
+          usabilityTestElement.innerHTML = `<p class="no-test"><i class="fas fa-exclamation-triangle"></i> Usability test ended.</p>`;
+      }
+
+      // Remove from storage
+      chrome.storage.local.remove("usabilityTest", () => {
+          console.log("Usability test removed from storage.");
+      });
+
+      sendResponse({ status: "success", message: "Usability test ended on the page" });
+  }
 });
 
