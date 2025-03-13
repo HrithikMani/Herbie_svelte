@@ -131,6 +131,23 @@ function parseImportedScripts(fileContent) {
   }).filter(Boolean); // Remove null values (invalid entries)
 }
 
+function appendToHerbie(index) {
+  chrome.storage.local.get(["herbie_script"], (result) => {
+    const existingScript = result.herbie_script || ""; // Get current script
+    const scriptToAppend = savedScripts[index]?.content || ""; // Get script to append
+
+    if (!scriptToAppend) return;
+
+    const updatedScript = existingScript + "\n" + scriptToAppend; // Append with newline
+
+    chrome.storage.local.set({ herbie_script: updatedScript }, () => {
+      console.log("Appended script to 'herbie_script'.");
+      activeTab = 'tab1'; // Switch to Tab1
+    });
+  });
+}
+
+
 </script>
 
 <!-- Header -->
@@ -177,6 +194,13 @@ function parseImportedScripts(fileContent) {
               on:click={() => loadIntoHerbie(index)}
             >
               <i class="fas fa-share"></i>
+            </button>
+            <button
+              class="btn-icon append-btn"
+              title="Append to Herbie Script"
+              on:click={() => appendToHerbie(index)}
+            >
+              <i class="fas fa-plus"></i>
             </button>
             <!-- Delete script -->
             <button
