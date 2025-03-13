@@ -35,7 +35,7 @@
         {
             "matches": ["<all_urls>"],
             "js":[
-              "diablelogs.js",
+         
                 "dist/mie-simulijs.js",
                 "content-scripts/execute.js",
                 "content-scripts/findelement.js",

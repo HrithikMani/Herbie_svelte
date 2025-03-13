@@ -105,7 +105,7 @@ window.addEventListener("message", (event) => {
 
   if (event.data.action === "startUsabilityTest") {
       console.log("Forwarding usability test start to background script:", event.data);
-
+      startTracking();
       chrome.runtime.sendMessage({
           action: "startUsabilityTest",
           taskId: event.data.taskId,
@@ -121,7 +121,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "endUsabilityTest") {
       console.log("Ending usability test...");
-
+      stopTracking();
       // Directly update the webpage
       const usabilityTestElement = document.getElementById("usability-test");
       if (usabilityTestElement) {

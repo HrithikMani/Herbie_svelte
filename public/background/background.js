@@ -59,7 +59,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 //thisi si the logic we use in background inorder to store information related to test case 
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async(message, sender, sendResponse) => {
   console.log("Received message from content script:", message);
   if (message.action === "startUsabilityTest") {
     const testDetails = {
@@ -76,30 +76,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     sendResponse({ status: "success", message: `Usability test started for ${message.taskId}` });
   }
+  if (message.action === "endUsabilityTest") {
+    await chrome.storage.local.set({ trackingEnabled: false }, () => {
+      console.log("User interaction tracking stopped.");
+     });
+     await chrome.storage.local.set({ trackingEnabled: false, userActions: [] }, () => {
+      console.log("User interaction tracking stopped. Cleared stored interactions.");
+    });
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      console.log(tabs);
+      if (tabs.length > 0 && tabs[0].id) {
+        console.log("hi")
+      }
+    });
+  }
+
+
  
 
 });
 
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Received message from popup:", message);
-
-  if (message.action === "endUsabilityTest") {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          
-
-          chrome.tabs.sendMessage(tabs[0].id, {
-              action: "endUsabilityTest",
-              taskId: message.taskId
-          }, (response) => {
-              console.log("Message forwarded to content script:", response);
-              sendResponse({ status: "success", message: "End test message sent" });
-          });
-      });
-
-      return true; // Keep the message channel open for async operations
-  }
-});
 
 
 
