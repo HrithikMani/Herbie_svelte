@@ -41,18 +41,13 @@
     chrome.runtime.sendMessage({
         action: "endUsabilityTest",
         taskId: usabilityTest.taskId
-    }, (response) => {
-        if (chrome.runtime.lastError) {
-            console.error("Error sending message:", chrome.runtime.lastError.message);
-        } else {
-            console.log("Response from background script:", response);
-        }
     });
 
     chrome.storage.local.remove("usabilityTest", () => {
         usabilityTest = null;
     });
     }
+
 
   
     function formatTime(ms) {
@@ -180,6 +175,41 @@ h1 {
 .fas {
     margin-right: 8px;
 }
+
+.test-results {
+            background: #f9f9f9;
+            border-left: 5px solid #34d399;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease-in-out;
+        }
+        .test-results:hover {
+            transform: scale(1.02);
+        }
+        .test-results-header {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2d6a4f;
+            margin-bottom: 8px;
+        }
+        .test-results-content p {
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #2563eb;
+        }
+        .highlight.error {
+            color: #dc2626;
+        }
+        .rating {
+            font-size: 18px;
+            color: #f59e0b;
+        }
 
   </style>
   

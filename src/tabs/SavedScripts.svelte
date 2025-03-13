@@ -52,23 +52,36 @@
 
   // Read a .txt file and add to saved scripts
   function handleFileChange(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
 
+  const fileReaders = [];
+
+  for (let file of files) {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const fileContent = e.target.result;
-      const newScript = {
-        title: `Imported Script (${file.name})`,
-        content: fileContent,
-        timestamp: Date.now() 
-      };
-      savedScripts = [newScript,...savedScripts];
-      saveToStorage();
-    };
+
+    fileReaders.push(
+      new Promise((resolve) => {
+        reader.onload = (e) => {
+          const fileContent = e.target.result;
+          const importedScripts = parseImportedScripts(fileContent);
+          resolve(importedScripts);
+        };
+      })
+    );
+
     reader.readAsText(file);
-    event.target.value = '';
   }
+
+  Promise.all(fileReaders).then((importedScriptsArray) => {
+    const importedScripts = importedScriptsArray.flat(); // Flatten the array of arrays
+    savedScripts = [...importedScripts, ...savedScripts]; // Append to saved scripts
+    saveToStorage();
+  });
+
+  event.target.value = ''; // Reset input field for re-imports
+}
+
 
   function handleTitleBlur() {
     saveToStorage();
@@ -77,6 +90,64 @@
     
     saveToStorage();
   }
+  function exportScripts() {
+  if (savedScripts.length === 0) {
+    alert("No saved scripts to export.");
+    return;
+  }
+
+  // Structure each script with delimiters for easy import
+  const fileContent = savedScripts
+    .map((script) => `--- START SCRIPT ---\nTitle: ${script.title}\nContent:\n${script.content}\n--- END SCRIPT ---\n`)
+    .join("\n");
+
+  const blob = new Blob([fileContent], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "saved_scripts.txt";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function parseImportedScripts(fileContent) {
+  const scriptBlocks = fileContent.split(/--- START SCRIPT ---/).slice(1); // Ignore first empty split
+
+  return scriptBlocks.map((block) => {
+    const titleMatch = block.match(/Title:\s*(.*)/);
+    const contentMatch = block.match(/Content:\s*([\s\S]*)--- END SCRIPT ---/);
+
+    if (titleMatch && contentMatch) {
+      return {
+        title: titleMatch[1].trim(),
+        content: contentMatch[1].trim(),
+        timestamp: Date.now(),
+      };
+    }
+    return null;
+  }).filter(Boolean); // Remove null values (invalid entries)
+}
+
+function appendToHerbie(index) {
+  chrome.storage.local.get(["herbie_script"], (result) => {
+    const existingScript = result.herbie_script || ""; // Get current script
+    const scriptToAppend = savedScripts[index]?.content || ""; // Get script to append
+
+    if (!scriptToAppend) return;
+
+    const updatedScript = existingScript + "\n" + scriptToAppend; // Append with newline
+
+    chrome.storage.local.set({ herbie_script: updatedScript }, () => {
+      console.log("Appended script to 'herbie_script'.");
+      activeTab = 'tab1'; // Switch to Tab1
+    });
+  });
+}
+
+
 </script>
 
 <!-- Header -->
@@ -84,6 +155,9 @@
   <h2>Saved Scripts</h2>
   <button class="import-button" on:click={handleImportClick}>
     <i class="fas fa-file-import"></i> Import
+  </button>
+  <button class="export-button" on:click={exportScripts}>
+    <i class="fas fa-file-export"></i> Export
   </button>
   <input
     type="file"
@@ -120,6 +194,13 @@
               on:click={() => loadIntoHerbie(index)}
             >
               <i class="fas fa-share"></i>
+            </button>
+            <button
+              class="btn-icon append-btn"
+              title="Append to Herbie Script"
+              on:click={() => appendToHerbie(index)}
+            >
+              <i class="fas fa-plus"></i>
             </button>
             <!-- Delete script -->
             <button
@@ -162,7 +243,7 @@
     background-color: #f8f9fa;
   }
 
-  .import-button {
+  .import-button,.export-button {
     border: none;
     background-color: #007bff;
     color: #fff;
@@ -174,7 +255,7 @@
     align-items: center;
     gap: 0.3rem;
   }
-  .import-button:hover {
+  .import-button:hover, .export-button:hover {
     background-color: #0056b3;
   }
 
