@@ -1,4 +1,4 @@
-console.log("Content scripts loaded");
+
 
 chrome.storage.local.get({ herbiecmdtree:[],herbiestartline:0 }, (result) => {
   console.log("retriving  herbiecmd tree in chrome storage")
@@ -13,6 +13,7 @@ chrome.storage.local.get({ herbiecmdtree:[],herbiestartline:0 }, (result) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "executeCommandFrom") {
+   console.log("hi")
     sendResponse({ status: 'success', message: 'Commands received' });
     console.log("Executing commands:", message.data);
 
@@ -43,6 +44,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 async function executeCommands(startLine, cmdtree) {
+
   for (let i = startLine; i < cmdtree.length; i++) {
 
      // Properly await retrieving storage value
@@ -61,20 +63,37 @@ async function executeCommands(startLine, cmdtree) {
     const xpath = item.code[item.code.indexOf("in") + 1]; // Extract XPath
     const delay = item.timeout || 1000; // Default delay
     let element = null;
-
+    
     console.log(`Executing action: ${action}, Value: ${value}, XPath: ${xpath}, Delay: ${delay}`);
-
-    if (action !== "wait") {
-      element = await find_element(xpath);
-      if (!element) {
-        console.error(`Element not found for XPath: ${xpath}`);
-        chrome.runtime.sendMessage({ status: 'error', message: `Element not found for XPath: ${xpath}` });
-        throw new Error(`Element not found for XPath: ${xpath}`);
+    
+    if(action === 'verify'){
+     
+       element = await find_element(xpath);
+      var verItem =  element.innerText.trim();
+      var verifyAgainst = item.verify[4].trim();
+  
+        if(verItem==verifyAgainst){
+         alert("Test Passed")
+        }else{
+          alert("Test Failed")
+        }
+     
+      
+    }else{
+      if (action !== "wait"   || action !== "verify" ) {
+        element = await find_element(xpath);
+        if (!element) {
+          console.error(`Element not found for XPath: ${xpath}`);
+          chrome.runtime.sendMessage({ status: 'error', message: `Element not found for XPath: ${xpath}` });
+          throw new Error(`Element not found for XPath: ${xpath}`);
+        }
       }
+      await execute(action, element, delay, value);
+      chrome.storage.local.set({ herbiestartline: i });
+
     }
 
-    await execute(action, element, delay, value);
-    chrome.storage.local.set({ herbiestartline: i });
+   
 
     // Update progress in the background script
     chrome.runtime.sendMessage(

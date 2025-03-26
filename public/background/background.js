@@ -39,6 +39,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
     sendResponse({ status: "Message relayed to popup" });
   }
+
+  if(message.action==='updateResult'){
+    console.log("Message received in popup:", message.data);
+        chrome.runtime.sendMessage({
+          action: "updatePopupResult",
+          data: message.data,
+        });
+    sendResponse({ status: "Message relayed to popup" });
+  }
   
   if(message.action==='updateLog'){
     console.log("Message received in popup:", message.data);
@@ -161,14 +170,14 @@ async function processTestResults(taskId) {
 function sendTestResultsToTargetTab(testResults) {
   chrome.tabs.query({}, (tabs) => {
       for (let tab of tabs) {
-          if (tab.url && tab.url.startsWith("http://localhost:5174/")) {
+          if (tab.url && tab.url.startsWith("http://127.0.0.1:5500/index.html")) {
               chrome.tabs.sendMessage(tab.id, { action: "updateUsabilityResults", data: testResults }, (response) => {
                   console.log("Sent test results to:", tab.url, response);
               });
               return; // Stop after finding the first matching tab
           }
       }
-      console.log("No active tab found for http://localhost:5174/");
+      console.log("No active tab found for http://127.0.0.1:5500/index.html");
   });
 }
 

@@ -95,6 +95,15 @@ async function parseStatement(stmt, cmd) {
                     cmd.code.push('mouseover');
                 case 'verify':
                     cmd.code.push('verify');
+                    cmd.code.push('in');
+                    var sentence = cmd.src;
+                    var verifyRegex = /^verify\s+that\s+the\s+(?<property>\w+)\s+of\s+(?<target>[\w\s]+)\s+(?<operator>equals|contains|is)\s+"(?<expectedValue>[^"]+)"$/i;
+                    var match = sentence.match(verifyRegex); 
+                    cmd.code.push(match[2]);
+                    cmd.verify=match;
+                    break;
+
+
                 case 'select':
                     console.log(cmd);
                     cmd.code.push('select');
