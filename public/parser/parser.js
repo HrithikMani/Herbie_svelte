@@ -1,8 +1,8 @@
-async function ParseScript(script) {
+async function ParseScript(script, currentUrl) {
     if (!script) {
         return [];
     }
-
+    
     var lines = script.split('\n');
     var cmdtree = [];
     var stack = [];
@@ -22,23 +22,38 @@ async function ParseScript(script) {
 
     // Create an array of promises for each line parsing
     let promises = lines.map(async (line, i) => {
-        var indentLevel = line.search(/\S|$/); // Find the indentation level
-        var cmd = { line: i, code: [], src: line.trim(), timeout: 3000, subcommands: [] };
-
-        var stmt = line.trim().match(/\w+|'[^']+'|"[^"]+"|\{\{(.*?)\}\}|\*|:/g); // tokenize line
+        var indentLevel = line.search(/\S|$/); // Find indentation level
+        var cmd = { line: i, code: [], src: line.trim(), timeout: 5000, subcommands: [] }; // Maintain original timeout of 5000
+        
+        // Handle bulleted lists (field/value pairs) as in original parser
+        if (line.trim().startsWith('*')) {
+            // This is a field value pair.  ie:  * Field: value
+            const fieldValueParts = line.trim().match(/\*[^:]+|:.+/g);
+            if (fieldValueParts && fieldValueParts.length >= 2) {
+                cmd.code.push('type');
+                cmd.code.push(fieldValueParts[1].slice(1).trim());
+                cmd.code.push('in');
+                cmd.code.push(fieldValueParts[0].slice(1).trim());
+                addCommand(cmd, indentLevel);
+                return; // Skip the rest of processing for this line
+            }
+        }
+        
+        // Regular parsing for non-bulleted items
+        var stmt = line.trim().match(/\w+|'[^']+'|"[^"]+"|\{\{(.*?)\}\}|\*|:/g); // Tokenize line
         if (stmt) {
-            await parseStatement(stmt, cmd);
+            await parseStatement(stmt, cmd, currentUrl);
             addCommand(cmd, indentLevel);
         }
     });
 
     // Wait for all the parsing promises to complete
     await Promise.all(promises);
-
+    
     return cmdtree;
 }
 
-async function parseStatement(stmt, cmd) {
+async function parseStatement(stmt, cmd, currentUrl) {
     for (var j = 0; j < stmt.length; j++) {
         var z = stmt[j].charAt(0);
         if (z === '{' || z === '"' || z === '\'') {
@@ -78,12 +93,9 @@ async function parseStatement(stmt, cmd) {
                     cmd.code.push(candidate);
                     break;
                 case 'on':
-                    if (cmd.code.length && cmd.code[cmd.code.length - 1] !== 'in') {
-                        cmd.code.push('in');
-                    }
-                    break;
                 case 'in':
                 case 'into':
+                    // Check if previous token is already 'in' - if so, skip adding it again
                     if (cmd.code.length && cmd.code[cmd.code.length - 1] !== 'in') {
                         cmd.code.push('in');
                     }
@@ -93,6 +105,7 @@ async function parseStatement(stmt, cmd) {
                     break;
                 case 'mouseover':
                     cmd.code.push('mouseover');
+                    break;
                 case 'verify':
                     cmd.code.push('verify');
                     cmd.code.push('in');
@@ -102,68 +115,98 @@ async function parseStatement(stmt, cmd) {
                     cmd.code.push(match[2]);
                     cmd.verify=match;
                     break;
-
-
                 case 'select':
-                    console.log(cmd);
                     cmd.code.push('select');
+                    break;
             }
         }
     }
 
-    const foundKeyword = await new Promise((resolve) => {
-        chrome.storage.local.get("globalKeywords", function(result) {
-            if (result.globalKeywords) {
-                const keywords = result.globalKeywords.map(item => item.keyword);
-                
-                function stripQuotesFromArray(arr) {
-                    return arr.map(str => {
-                        if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
-                            return str.slice(1, -1);
-                        }
-                        return str;
-                    });
-                }
-        
-                function findKeyword(str) {
-                    const cleanedStr = stripQuotesFromArray(str);
-                    return result.globalKeywords.find(item => cleanedStr.includes(item.keyword)) || null;
-                }
-        
-                const keyword = findKeyword(cmd.code);
-                resolve(keyword);
-            } else {
-                resolve(null);
-            }
-        });
-    });
-    console.log(foundKeyword);
+    // Get hostname from URL for local keywords
+    let hostname = '';
+    if (currentUrl) {
+        try {
+            const url = new URL(currentUrl);
+            hostname = url.hostname;
+        } catch (error) {
+            console.warn("Invalid URL format:", error);
+        }
+    }
+
+    // Find keyword (local first, then global)
+    const foundKeyword = await findKeywordWithPriority(cmd.code, hostname);
+    
     if (foundKeyword) {
         if (foundKeyword.hasVariable) {
-            const variables = cmd.code.filter(str => (str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'")))
-                                        .map(str => str.slice(1, -1));
+            // Handle variable substitution
+            const variables = cmd.code.filter(str => 
+                (str.startsWith('"') && str.endsWith('"')) || 
+                (str.startsWith("'") && str.endsWith("'"))
+            ).map(str => str.slice(1, -1));
 
-             let updatedXpath = foundKeyword.xpath;
+            let updatedXpath = foundKeyword.xpath;
 
             // For 'type' commands, skip the first variable, for others, use all variables
-            const relevantVariables = (cmd.code[0]==("type") || cmd.code[0]==("verify") || cmd.code[0]==("select")) ? variables.slice(1) : variables;
+            const relevantVariables = (cmd.code[0] === "type" || cmd.code[0] === "verify" || cmd.code[0] === "select") 
+                ? variables.slice(1) 
+                : variables;
             
             relevantVariables.forEach(variable => {
-                updatedXpath = updatedXpath.replace('{$}', "'"+variable+"'");
+                updatedXpath = updatedXpath.replace('{$}', "'" + variable + "'");
             });
 
             var inclause = cmd.code.indexOf("in");
-            cmd.code[inclause + 1] = updatedXpath;
-
+            if (inclause !== -1 && inclause + 1 < cmd.code.length) {
+                cmd.code[inclause + 1] = updatedXpath;
+            }
         } else {
+            // Simple replacement with no variables
             var inclause = cmd.code.indexOf("in");
-            cmd.code[inclause + 1] = foundKeyword.xpath;
+            if (inclause !== -1 && inclause + 1 < cmd.code.length) {
+                cmd.code[inclause + 1] = foundKeyword.xpath;
+            }
         }
     } else {
-        console.log("The string does not contain any keywords.");
+        console.log("The string does not contain any matching keywords.");
     }
 }
 
+// Find a keyword prioritizing local ones first, then falling back to global
+async function findKeywordWithPriority(cmdCode, hostname) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(["globalKeywords", "localKeywords"], function(result) {
+            const globalKeywords = result.globalKeywords || [];
+            const localKeywords = result.localKeywords || {};
+            
+            // Get local keywords for the current hostname
+            const pageLocalKeywords = hostname ? (localKeywords[hostname] || []) : [];
+            
+            // Clean strings for comparison (remove quotes)
+            const cleanedCmdCode = cmdCode.map(str => {
+                if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+                    return str.slice(1, -1);
+                }
+                return str;
+            });
+            
+            // First try to find a local keyword match
+            let foundKeyword = null;
+            if (hostname) {
+                foundKeyword = pageLocalKeywords.find(item => 
+                    cleanedCmdCode.includes(item.keyword)
+                );
+            }
+            
+            // If no local keyword found, try global keywords
+            if (!foundKeyword) {
+                foundKeyword = globalKeywords.find(item => 
+                    cleanedCmdCode.includes(item.keyword)
+                );
+            }
+            
+            resolve(foundKeyword);
+        });
+    });
+}
 
-
-export { ParseScript};
+export { ParseScript };
