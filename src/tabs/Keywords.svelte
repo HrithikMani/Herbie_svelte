@@ -1,91 +1,56 @@
 <script>
   import { onMount } from "svelte";
 
-  // Data storage
   let globalKeywords = [];
-  let localKeywords = {};
-  let currentHostname = '';
-  let currentPageKeywords = [];
-  
-  // Form fields
+  let localKeywords = [];
   let newKeyword = "";
   let newXpath = "";
   let hasVariable = false;
-  let isLocalKeyword = false;
-
-  // Interface states
+  let isGlobal = true; // Default to global
   let searchTerm = "";
-  let activeTab = "global"; // Default to global tab
-  
-  // Filtered keywords based on search
-  $: filteredGlobalKeywords = filterKeywords(globalKeywords, searchTerm);
-  $: filteredLocalKeywords = filterKeywords(currentPageKeywords, searchTerm);
+  let activeTab = "global"; // 'global' or 'local'
 
-  // Get current tab's hostname
-  const getCurrentHostname = async () => {
-    try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs.length > 0 && tabs[0].url) {
-        const url = new URL(tabs[0].url);
-        return url.hostname;
-      }
-    } catch (error) {
-      console.error("Error getting hostname:", error);
-    }
-    return '';
-  };
-
-  // Load all keywords from storage
-  const loadKeywords = async () => {
-    // Get current hostname first
-    currentHostname = await getCurrentHostname();
-    
-    // Load keywords from storage
-    chrome.storage.local.get({ globalKeywords: [], localKeywords: {} }, (result) => {
-      globalKeywords = result.globalKeywords || [];
-      localKeywords = result.localKeywords || {};
-      
-      // Get keywords specific to current page
-      currentPageKeywords = currentHostname ? (localKeywords[currentHostname] || []) : [];
-      
-      // Auto-switch to local tab if we're on a page with local keywords
-      if (currentPageKeywords.length > 0) {
-        activeTab = "local";
+  // Function to get current hostname
+  let currentHostname = "";
+  onMount(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0] && tabs[0].url) {
+        try {
+          currentHostname = new URL(tabs[0].url).hostname;
+        } catch (e) {
+          console.error("Error getting hostname:", e);
+        }
       }
     });
+    
+    // Load keywords
+    loadKeywords();
+  });
+
+  const loadKeywords = () => {
+    // Load global keywords
+    chrome.storage.local.get({ globalKeywords: [] }, (result) => {
+      globalKeywords = result.globalKeywords || [];
+    });
+    
+    // Load local keywords for the current URL
+    if (currentHostname) {
+      chrome.storage.local.get({ localKeywords: {} }, (result) => {
+        localKeywords = result.localKeywords[currentHostname] || [];
+      });
+    }
   };
 
-  // Add a new keyword
   const addKeyword = () => {
     if (newKeyword.trim() && newXpath.trim()) {
       const newKeywordObj = {
         keyword: newKeyword.trim(),
         xpath: newXpath.trim(),
-        hasVariable
+        global: isGlobal,
+        hasVariable,
       };
 
-      if (isLocalKeyword && currentHostname) {
-        // Add to local keywords for the current page
-        chrome.storage.local.get({ localKeywords: {} }, (result) => {
-          const updatedLocalKeywords = { ...result.localKeywords };
-          
-          // Initialize array for this hostname if it doesn't exist
-          if (!updatedLocalKeywords[currentHostname]) {
-            updatedLocalKeywords[currentHostname] = [];
-          }
-          
-          updatedLocalKeywords[currentHostname] = [
-            ...updatedLocalKeywords[currentHostname],
-            newKeywordObj
-          ];
-          
-          chrome.storage.local.set({ localKeywords: updatedLocalKeywords }, () => {
-            localKeywords = updatedLocalKeywords;
-            currentPageKeywords = updatedLocalKeywords[currentHostname];
-            resetForm();
-          });
-        });
-      } else {
+      if (isGlobal) {
         // Add to global keywords
         chrome.storage.local.get({ globalKeywords: [] }, (result) => {
           const updatedKeywords = [...(result.globalKeywords || []), newKeywordObj];
@@ -94,18 +59,32 @@
             resetForm();
           });
         });
+      } else {
+        // Add to local keywords for the current URL
+        if (currentHostname) {
+          chrome.storage.local.get({ localKeywords: {} }, (result) => {
+            const allLocalKeywords = result.localKeywords || {};
+            const siteKeywords = allLocalKeywords[currentHostname] || [];
+            
+            const updatedSiteKeywords = [...siteKeywords, newKeywordObj];
+            allLocalKeywords[currentHostname] = updatedSiteKeywords;
+            
+            chrome.storage.local.set({ localKeywords: allLocalKeywords }, () => {
+              localKeywords = updatedSiteKeywords;
+              resetForm();
+            });
+          });
+        }
       }
     }
   };
 
-  // Reset form after submission
   const resetForm = () => {
     newKeyword = "";
     newXpath = "";
     hasVariable = false;
   };
 
-  // Import keywords from a JSON file
   const importKeywords = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -122,423 +101,314 @@
     }
   };
 
-  // Process and store imported keywords
   const processImportedKeywords = (keywords) => {
-    chrome.storage.local.get({ globalKeywords: [], localKeywords: {} }, (result) => {
-      let updatedGlobalKeywords = [...(result.globalKeywords || [])];
-      let updatedLocalKeywords = { ...(result.localKeywords || {}) };
+    if (activeTab === "global") {
+      chrome.storage.local.get({ globalKeywords: [] }, (result) => {
+        let globalKeywords = result.globalKeywords || [];
 
-      keywords.forEach((keywordObj) => {
-        const { keyword, xpath, isLocal = false, hostname = '', hasVariable = false } = keywordObj;
-        
-        if (isLocal && hostname) {
-          // Process as local keyword
-          if (!updatedLocalKeywords[hostname]) {
-            updatedLocalKeywords[hostname] = [];
+        keywords.forEach((keywordObj) => {
+          const { keyword, xpath, hasVariable = false } = keywordObj;
+          if (!globalKeywords.some((item) => item.keyword === keyword)) {
+            globalKeywords.push({ keyword, xpath, global: true, hasVariable });
+          } else {
+            console.log(`Duplicate keyword skipped: ${keyword}`);
           }
+        });
+
+        chrome.storage.local.set({ globalKeywords }, () => {
+          console.log("Keywords imported successfully.");
+          loadKeywords();
+        });
+      });
+    } else {
+      if (currentHostname) {
+        chrome.storage.local.get({ localKeywords: {} }, (result) => {
+          const allLocalKeywords = result.localKeywords || {};
+          const siteKeywords = allLocalKeywords[currentHostname] || [];
           
-          // Avoid duplicates in local keywords
-          if (!updatedLocalKeywords[hostname].some(k => k.keyword === keyword)) {
-            updatedLocalKeywords[hostname].push({ 
-              keyword, 
-              xpath, 
-              hasVariable 
-            });
-          }
-        } else {
-          // Process as global keyword
-          if (!updatedGlobalKeywords.some(k => k.keyword === keyword)) {
-            updatedGlobalKeywords.push({ 
-              keyword, 
-              xpath, 
-              hasVariable 
-            });
-          }
-        }
-      });
-
-      // Save all updated keywords
-      chrome.storage.local.set({ 
-        globalKeywords: updatedGlobalKeywords,
-        localKeywords: updatedLocalKeywords
-      }, () => {
-        globalKeywords = updatedGlobalKeywords;
-        localKeywords = updatedLocalKeywords;
-        currentPageKeywords = currentHostname ? (updatedLocalKeywords[currentHostname] || []) : [];
-        console.log("Keywords imported successfully");
-      });
-    });
+          keywords.forEach((keywordObj) => {
+            const { keyword, xpath, hasVariable = false } = keywordObj;
+            if (!siteKeywords.some((item) => item.keyword === keyword)) {
+              siteKeywords.push({ keyword, xpath, global: false, hasVariable });
+            } else {
+              console.log(`Duplicate keyword skipped: ${keyword}`);
+            }
+          });
+          
+          allLocalKeywords[currentHostname] = siteKeywords;
+          chrome.storage.local.set({ localKeywords: allLocalKeywords }, () => {
+            console.log("Local keywords imported successfully.");
+            loadKeywords();
+          });
+        });
+      }
+    }
   };
 
-  // Export all keywords to a JSON file
-  const exportKeywords = () => {
-    // Prepare export data structure
-    const exportData = [
-      // Export global keywords
-      ...globalKeywords.map(kw => ({ 
-        ...kw, 
-        isLocal: false 
-      })),
-      
-      // Export all local keywords with their hostnames
-      ...Object.entries(localKeywords).flatMap(([hostname, keywords]) => 
-        keywords.map(kw => ({ 
-          ...kw, 
-          isLocal: true, 
-          hostname 
-        }))
-      )
-    ];
-    
-    // Create file and trigger download
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'herbie-keywords.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Filter keywords based on search term
-  function filterKeywords(keywords, term) {
-    if (!term || term.trim() === '') return keywords;
-    
-    const normalizedTerm = term.toLowerCase().trim();
-    
-    return keywords.filter(item => 
-      item.keyword.toLowerCase().includes(normalizedTerm) ||
-      item.xpath.toLowerCase().includes(normalizedTerm)
-    );
-  }
-
-  // Clear search term
-  function clearSearch() {
-    searchTerm = '';
-  }
-
-  // Toggle details visibility for a keyword
-  const toggleDetails = (keywordSet, index) => {
-    const detailsElement = document.getElementById(`${keywordSet}-${index}`);
+  const toggleDetails = (index, isGlobalKeyword = true) => {
+    const detailsId = isGlobalKeyword ? `global-details-${index}` : `local-details-${index}`;
+    const detailsElement = document.getElementById(detailsId);
     if (detailsElement) {
-      detailsElement.style.display = 
+      detailsElement.style.display =
         detailsElement.style.display === "none" ? "flex" : "none";
     }
   };
 
-  // Delete a global keyword
-  const deleteGlobalKeyword = (index) => {
-    chrome.storage.local.get({ globalKeywords: [] }, (result) => {
-      const updatedKeywords = [...(result.globalKeywords || [])];
-      updatedKeywords.splice(index, 1);
-      chrome.storage.local.set({ globalKeywords: updatedKeywords }, () => {
-        globalKeywords = updatedKeywords;
+  // Delete a keyword without confirmation dialog
+  const deleteKeyword = (index, isGlobalKeyword = true) => {
+    if (isGlobalKeyword) {
+      chrome.storage.local.get({ globalKeywords: [] }, (result) => {
+        const updatedKeywords = [...(result.globalKeywords || [])];
+        updatedKeywords.splice(index, 1);
+        chrome.storage.local.set({ globalKeywords: updatedKeywords }, () => {
+          globalKeywords = updatedKeywords;
+        });
       });
-    });
+    } else {
+      if (currentHostname) {
+        chrome.storage.local.get({ localKeywords: {} }, (result) => {
+          const allLocalKeywords = result.localKeywords || {};
+          const siteKeywords = [...(allLocalKeywords[currentHostname] || [])];
+          
+          siteKeywords.splice(index, 1);
+          allLocalKeywords[currentHostname] = siteKeywords;
+          
+          chrome.storage.local.set({ localKeywords: allLocalKeywords }, () => {
+            localKeywords = siteKeywords;
+          });
+        });
+      }
+    }
+  };
+  
+  // Delete all keywords for the current tab without confirmation
+  const deleteAllKeywords = () => {
+    if (activeTab === 'global') {
+      chrome.storage.local.set({ globalKeywords: [] }, () => {
+        globalKeywords = [];
+      });
+    } else if (currentHostname) {
+      chrome.storage.local.get({ localKeywords: {} }, (result) => {
+        const allLocalKeywords = result.localKeywords || {};
+        delete allLocalKeywords[currentHostname];
+        chrome.storage.local.set({ localKeywords: allLocalKeywords }, () => {
+          localKeywords = [];
+        });
+      });
+    }
   };
 
-  // Delete a local keyword
-  const deleteLocalKeyword = (index) => {
-    if (!currentHostname) return;
-    
-    chrome.storage.local.get({ localKeywords: {} }, (result) => {
-      const updatedLocalKeywords = { ...result.localKeywords };
-      
-      if (updatedLocalKeywords[currentHostname]) {
-        updatedLocalKeywords[currentHostname].splice(index, 1);
-        
-        // Remove the hostname entry if there are no keywords left
-        if (updatedLocalKeywords[currentHostname].length === 0) {
-          delete updatedLocalKeywords[currentHostname];
+  const updateKeyword = (index, field, value, isGlobalKeyword = true) => {
+    if (isGlobalKeyword) {
+      chrome.storage.local.get({ globalKeywords: [] }, (result) => {
+        const updatedKeywords = [...(result.globalKeywords || [])];
+        if (updatedKeywords[index]) {
+          updatedKeywords[index][field] = value;
         }
-        
-        chrome.storage.local.set({ localKeywords: updatedLocalKeywords }, () => {
-          localKeywords = updatedLocalKeywords;
-          currentPageKeywords = updatedLocalKeywords[currentHostname] || [];
+        chrome.storage.local.set({ globalKeywords: updatedKeywords }, () => {
+          globalKeywords = updatedKeywords;
+          console.log(`Keyword updated: ${field} = ${value}`);
         });
-      }
-    });
-  };
-
-  // Update a global keyword
-  const updateGlobalKeyword = (index, field, value) => {
-    chrome.storage.local.get({ globalKeywords: [] }, (result) => {
-      const updatedKeywords = [...(result.globalKeywords || [])];
-      if (updatedKeywords[index]) {
-        updatedKeywords[index][field] = value;
-      }
-      chrome.storage.local.set({ globalKeywords: updatedKeywords }, () => {
-        globalKeywords = updatedKeywords;
       });
-    });
-  };
-
-  // Update a local keyword
-  const updateLocalKeyword = (index, field, value) => {
-    if (!currentHostname) return;
-    
-    chrome.storage.local.get({ localKeywords: {} }, (result) => {
-      const updatedLocalKeywords = { ...result.localKeywords };
-      
-      if (updatedLocalKeywords[currentHostname] && updatedLocalKeywords[currentHostname][index]) {
-        updatedLocalKeywords[currentHostname][index][field] = value;
-        
-        chrome.storage.local.set({ localKeywords: updatedLocalKeywords }, () => {
-          localKeywords = updatedLocalKeywords;
-          currentPageKeywords = updatedLocalKeywords[currentHostname] || [];
+    } else {
+      if (currentHostname) {
+        chrome.storage.local.get({ localKeywords: {} }, (result) => {
+          const allLocalKeywords = result.localKeywords || {};
+          const siteKeywords = [...(allLocalKeywords[currentHostname] || [])];
+          
+          if (siteKeywords[index]) {
+            siteKeywords[index][field] = value;
+          }
+          
+          allLocalKeywords[currentHostname] = siteKeywords;
+          chrome.storage.local.set({ localKeywords: allLocalKeywords }, () => {
+            localKeywords = siteKeywords;
+            console.log(`Local keyword updated: ${field} = ${value}`);
+          });
         });
       }
-    });
+    }
   };
 
-  // Load keywords when component mounts
-  onMount(() => {
-    loadKeywords();
-  });
+  // Filtered keywords based on search
+  $: filteredGlobalKeywords = globalKeywords.filter(k => 
+    k.keyword.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    k.xpath.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  $: filteredLocalKeywords = localKeywords.filter(k => 
+    k.keyword.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    k.xpath.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Function to submit (placeholder)
+  function handleSubmit() {
+    console.log("Form submitted");
+  }
+
+  // Delete all keywords (placeholder)
+  function handleDeleteAll() {
+    if (activeTab === "global") {
+      chrome.storage.local.set({ globalKeywords: [] }, () => {
+        globalKeywords = [];
+      });
+    } else {
+      if (currentHostname) {
+        chrome.storage.local.get({ localKeywords: {} }, (result) => {
+          const allLocalKeywords = result.localKeywords || {};
+          delete allLocalKeywords[currentHostname];
+          chrome.storage.local.set({ localKeywords: allLocalKeywords }, () => {
+            localKeywords = [];
+          });
+        });
+      }
+    }
+  }
 </script>
 
 <div id="tab4" class="tab-content active">
-  <div class="keywords-header">
-    <h1 class="keywords-title">Keywords</h1>
-    <div class="action-buttons">
-      <button id="inspect-element" class="action-button">
-        <i class="fas fa-search"></i> Inspect
-      </button>
-      <input
-        type="file"
-        id="file-input"
-        accept="application/json"
-        on:change={importKeywords}
-        style="display: none;"
-      />
-      <button
-        id="import-keywords"
-        class="action-button"
-        on:click={() => document.getElementById("file-input").click()}
-      >
-        <i class="fas fa-file-import"></i> Import
-      </button>
-      <button
-        id="export-keywords"
-        class="action-button"
-        on:click={exportKeywords}
-      >
-        <i class="fas fa-file-export"></i> Export
-      </button>
-    </div>
+  <!-- Header -->
+  <h1 class="keywords-title">Keywords</h1>
+  
+  <!-- Action buttons -->
+  <div class="action-buttons">
+    <button id="inspect-element" class="action-button">
+      <i class="fas fa-search"></i> Inspect
+    </button>
+    <input
+      type="file"
+      id="file-input"
+      accept="application/json"
+      on:change={importKeywords}
+      style="display: none;"
+    />
+    <button
+      id="import-keywords"
+      class="action-button"
+      on:click={() => document.getElementById("file-input").click()}
+    >
+      <i class="fas fa-file-import"></i> Import
+    </button>
+    <button
+      id="export-keywords"
+      class="action-button"
+    >
+      <i class="fas fa-file-export"></i> Export
+    </button>
   </div>
 
-  <!-- Search bar with clear button -->
-  <div class="search-container">
-    <div class="search-input-wrapper">
+  <!-- Form for adding new keywords -->
+  <div class="keyword-form">
+    <div class="form-group">
       <input 
+        bind:value={newKeyword} 
         type="text" 
-        id="search-keyword" 
-        placeholder="Search keywords" 
-        bind:value={searchTerm}
-        aria-label="Search Keywords" 
-      />
-      {#if searchTerm}
-        <button class="clear-search" on:click={clearSearch}>
-          <i class="fas fa-times"></i>
-        </button>
-      {/if}
-    </div>
-  </div>
-
-  <!-- Tab selector -->
-  <div class="tab-navigation">
-    <button 
-      class={`tab-link ${activeTab === "global" ? "" : "active"}`} 
-      on:click={() => activeTab = "global"}
-    >
-      Global Keywords
-    </button>
-    <button 
-      class={`tab-link ${activeTab === "local" ? "active" : ""}`} 
-      on:click={() => activeTab = "local"}
-    >
-      Local Keywords ({currentPageKeywords.length})
-    </button>
-  </div>
-
-  <!-- Add keyword form -->
-  <div id="keywords-container" class="form-group">
-    <input 
-      bind:value={newKeyword} 
-      type="text" 
-      id="new-keyword" 
-      placeholder="Enter keyword" 
-      aria-label="Keyword Input" 
-      class="form-control"
-    >
-    <textarea 
-      bind:value={newXpath} 
-      id="keyword-xpath" 
-      placeholder="Enter XPath" 
-      aria-label="XPath Input" 
-      class="form-control"
-    ></textarea>
-
-    <div class="keyword-actions">
-      <label class="checkbox-inline">
-        <input 
-          type="checkbox" 
-          bind:checked={hasVariable} 
-          id="has-variable"
-        > 
-        Has Variable
-      </label>
-      {#if currentHostname}
-        <label class="checkbox-inline local-toggle">
-          <input 
-            type="checkbox" 
-            bind:checked={isLocalKeyword} 
-            id="is-local-keyword"
-          > 
-          <span class="local-label">
-            {isLocalKeyword ? 'Local' : 'Global'} Keyword
-            {#if isLocalKeyword}
-              <span class="hostname">({currentHostname})</span>
-            {/if}
-          </span>
-        </label>
-      {/if}
-      <button 
-        id="add-keyword" 
-        on:click={addKeyword} 
-        class="add-button"
-        disabled={isLocalKeyword && !currentHostname}
+        id="new-keyword" 
+        placeholder="Enter keyword" 
+        aria-label="Keyword Input"
       >
+    </div>
+    
+    <div class="form-group">
+      <textarea 
+        bind:value={newXpath} 
+        id="keyword-xpath" 
+        placeholder="Enter XPath" 
+        aria-label="XPath Input"
+      ></textarea>
+    </div>
+
+    <div class="form-actions">
+      <div class="checkbox-group">
+        <label class="checkbox-container">
+          <input bind:checked={hasVariable} type="checkbox" id="has-variable">
+          <span>Has Variable</span>
+        </label>
+        
+        <label class="checkbox-container">
+          <input bind:checked={isGlobal} type="checkbox" id="global-keyword">
+          <span>Global Keyword</span>
+        </label>
+      </div>
+      
+      <button id="add-keyword" on:click={addKeyword} class="add-button">
         <i class="fas fa-plus"></i> Add Keyword
       </button>
     </div>
   </div>
 
-  <!-- Local Keywords Tab -->
-  {#if activeTab === "local" && currentHostname}
-    <div id="local-keywords-container" class="keywords-list">
-      <h2>Local Keywords for {currentHostname}</h2>
+  <!-- Search Bar -->
+  <div class="search-container">
+    <input 
+      type="text" 
+      id="search-keyword" 
+      bind:value={searchTerm} 
+      placeholder="Search keywords" 
+      aria-label="Search Keyword"
+    >
+  </div>
 
-      {#if currentPageKeywords.length === 0}
-        <div class="empty-message">
-          <p>No local keywords for this page.</p>
-          <p class="helper-text">Add keywords specific to {currentHostname} using the form above.</p>
-        </div>
-      {:else if filteredLocalKeywords.length === 0 && searchTerm}
-        <div class="empty-message">
-          <p>No matching keywords found for "{searchTerm}"</p>
-          <p class="helper-text">Try a different search term or <button class="clear-search-link" on:click={clearSearch}>clear the search</button></p>
+  <!-- Tab navigation for Global/Local -->
+  <div class="keyword-tabs">
+    <button 
+      class="tab-button {activeTab === 'global' ? 'active' : ''}" 
+      on:click={() => activeTab = "global"}
+    >
+      Global Keywords
+    </button>
+    <button 
+      class="tab-button {activeTab === 'local' ? 'active' : ''}" 
+      on:click={() => activeTab = "local"}
+    >
+      Local Keywords
+    </button>
+  </div>
+  
+  <!-- Keywords list -->
+  <div class="keywords-list-container">
+    {#if activeTab === 'global'}
+      {#if filteredGlobalKeywords.length === 0}
+        <div class="no-keywords">
+          No global keywords found.
         </div>
       {:else}
-        <ul id="local-keywords-list">
-          {#each filteredLocalKeywords as keyword, index}
-            <li class="keyword-item">
-              <div class="keyword-header" 
-                on:click={() => toggleDetails('local', index)}
-                on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleDetails('local', index)}
-              >
-                <span class="keyword-name">{keyword.keyword}</span>
-                <div class="keyword-actions">
-                  <span class="badge">Fixed</span>
-                  <button
-                    class="icon-button delete-keyword"
-                    aria-label="Delete"
-                    on:click={(e) => {
-                      e.stopPropagation();
-                      deleteLocalKeyword(index);
-                    }}
-                  >
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                </div>
-              </div>
-      
-              <div
-                id={`local-${index}`}
-                class="keyword-details"
-                style="display: none;"
-              >
-                <textarea
-                  class="xpath"
-                  bind:value={keyword.xpath}
-                  on:input={() => updateLocalKeyword(index, 'xpath', keyword.xpath)}
-                ></textarea>
-                <label class="details-option">
-                  <input
-                    type="checkbox"
-                    class="has-variable"
-                    bind:checked={keyword.hasVariable}
-                    on:change={() => updateLocalKeyword(index, 'hasVariable', keyword.hasVariable)}
-                  />
-                  Has Variable
-                </label>
-              </div>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </div>
-  {/if}
-
-  <!-- Global Keywords Tab -->
-  {#if activeTab === "global" || !currentHostname}
-    <div id="global-keywords-container" class="keywords-list">
-      <h2>Global Keywords</h2>
-
-      {#if globalKeywords.length === 0}
-        <div class="empty-message">
-          <p>No global keywords defined.</p>
-          <p class="helper-text">Add keywords that work across all pages using the form above.</p>
-        </div>
-      {:else if filteredGlobalKeywords.length === 0 && searchTerm}
-        <div class="empty-message">
-          <p>No matching keywords found for "{searchTerm}"</p>
-          <p class="helper-text">Try a different search term or <button class="clear-search-link" on:click={clearSearch}>clear the search</button></p>
-        </div>
-      {:else}
-        <ul id="global-keywords-list">
+        <ul class="keywords-list">
           {#each filteredGlobalKeywords as keyword, index}
             <li class="keyword-item">
               <div class="keyword-header" 
-                on:click={() => toggleDetails('global', index)}
-                on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleDetails('global', index)}
-              >
+                on:click={() => toggleDetails(index, true)}
+                on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleDetails(index, true)}>
                 <span class="keyword-name">{keyword.keyword}</span>
                 <div class="keyword-actions">
-                  <span class="badge">Fixed</span>
                   <button
-                    class="icon-button delete-keyword"
+                    class="delete-keyword"
                     aria-label="Delete"
                     on:click={(e) => {
                       e.stopPropagation();
-                      deleteGlobalKeyword(index);
+                      deleteKeyword(index, true);
                     }}
                   >
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 </div>
               </div>
-      
+        
               <div
-                id={`global-${index}`}
+                id={`global-details-${index}`}
                 class="keyword-details"
                 style="display: none;"
               >
                 <textarea
                   class="xpath"
                   bind:value={keyword.xpath}
-                  on:input={() => updateGlobalKeyword(index, 'xpath', keyword.xpath)}
+                  on:input={() => updateKeyword(index, 'xpath', keyword.xpath, true)}
                 ></textarea>
-                <label class="details-option">
+                <label>
                   <input
                     type="checkbox"
                     class="has-variable"
                     bind:checked={keyword.hasVariable}
-                    on:change={() => updateGlobalKeyword(index, 'hasVariable', keyword.hasVariable)}
+                    on:change={() => updateKeyword(index, 'hasVariable', keyword.hasVariable, true)}
                   />
                   Has Variable
                 </label>
@@ -547,309 +417,361 @@
           {/each}
         </ul>
       {/if}
-    </div>
-  {/if}
+    {:else}
+      <!-- Local Keywords List -->
+      {#if !currentHostname}
+        <div class="no-keywords">
+          No active tab or valid URL detected.
+        </div>
+      {:else if filteredLocalKeywords.length === 0}
+        <div class="no-keywords">
+          No local keywords for {currentHostname}.
+        </div>
+      {:else}
+        <ul class="keywords-list">
+          {#each filteredLocalKeywords as keyword, index}
+            <li class="keyword-item">
+              <div class="keyword-header" 
+                on:click={() => toggleDetails(index, false)}
+                on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleDetails(index, false)}>
+                <span class="keyword-name">{keyword.keyword}</span>
+                <div class="keyword-actions">
+                  <button
+                    class="delete-keyword"
+                    aria-label="Delete"
+                    on:click={(e) => {
+                      e.stopPropagation();
+                      deleteKeyword(index, false);
+                    }}
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+        
+              <div
+                id={`local-details-${index}`}
+                class="keyword-details"
+                style="display: none;"
+              >
+                <textarea
+                  class="xpath"
+                  bind:value={keyword.xpath}
+                  on:input={() => updateKeyword(index, 'xpath', keyword.xpath, false)}
+                ></textarea>
+                <label>
+                  <input
+                    type="checkbox"
+                    class="has-variable"
+                    bind:checked={keyword.hasVariable}
+                    on:change={() => updateKeyword(index, 'hasVariable', keyword.hasVariable, false)}
+                  />
+                  Has Variable
+                </label>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    {/if}
+  </div>
 </div>
 
 <style>
-  /* Tab Navigation */
-  .tab-navigation {
-    display: flex;
-    border-bottom: 2px solid #f0f0f0;
-    margin-bottom: 15px;
-  }
-
-  .tab-link {
-    flex: 1;
-    padding: 10px 0;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    text-align: center;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: #666;
-  }
-
-  .tab-link.active {
-    border-bottom: 2px solid #007bff;
-    color: #007bff;
-  }
-
-  /* Keywords Header */
-  .keywords-header {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 15px;
-  }
-
-  .keywords-title {
-    font-size: 24px;
-    margin: 0;
+  /* Main container */
+  .tab-content {
     padding: 0;
-    font-weight: bold;
-  }
-
-  /* Action Buttons Container */
-  .action-buttons {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  /* Action Button Style */
-  .action-button {
-    background-color: #5b6f92;
-    color: #fff;
-    border: none;
-    border-radius: 3px;
-    padding: 8px 12px;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    transition: background-color 0.2s;
-  }
-
-  .action-button:hover {
-    background-color: #4a5d7e;
-  }
-
-  /* Search Container with Clear Button */
-  .search-container {
-    margin-bottom: 15px;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    background-color: white;
   }
   
-  .search-input-wrapper {
-    position: relative;
-    width: 100%;
+  /* Header */
+  .keywords-title {
+    padding: 10px;
+    margin: 0;
+    font-size: 24px;
+    font-weight: normal;
+    border-bottom: 1px solid #ddd;
+    background-color: #f8f9fa;
+    color: #333;
+  }
+  
+  /* Action buttons row */
+  .action-buttons {
+    display: flex;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    gap: 5px;
+    background-color: #fff;
+  }
+  
+  .action-button {
+    background-color: #5b7db1;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+  }
+  
+  .action-button:hover {
+    background-color: #4a6a9b;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+  
+  .action-button i {
+    margin-right: 5px;
+  }
+  
+  /* Search bar */
+  .search-container {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    margin-top: 10px;
+    background-color: #fff;
   }
   
   #search-keyword {
     width: 100%;
-    padding: 8px 12px;
-    padding-right: 30px; /* Space for clear button */
-    border: 1px solid #ddd;
+    padding: 8px 12px 8px 30px;
+    border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
     box-sizing: border-box;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat;
+    background-position: 8px center;
+    background-color: #fff;
+    transition: all 0.2s ease;
   }
   
-  .clear-search {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
+  #search-keyword:focus {
+    border-color: #5b7db1;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(91, 125, 177, 0.2);
+  }
+  
+  /* Tab navigation */
+  .keyword-tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    background-color: #fff;
+  }
+  
+  .tab-button {
+    flex: 1;
     background: none;
     border: none;
-    color: #999;
+    padding: 12px 15px;
+    font-size: 13px;
     cursor: pointer;
-    font-size: 14px;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .clear-search:hover {
+    text-align: center;
     color: #666;
+    position: relative;
+    transition: all 0.2s ease;
   }
   
-  .clear-search-link {
-    background: none;
-    border: none;
+  .tab-button:hover {
     color: #007bff;
-    padding: 0;
-    font-size: inherit;
-    text-decoration: underline;
-    cursor: pointer;
+    background-color: rgba(0, 123, 255, 0.05);
   }
   
-  .clear-search-link:hover {
-    color: #0056b3;
-  }
-
-  /* Add button style */
-  .add-button {
-    background-color: #007bff;
-    color: #ffffff;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.2s;
-  }
-
-  .add-button:hover {
-    background-color: #0056b3;
-  }
-  
-  .add-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  /* Form Elements */
-  .form-group {
-    margin-bottom: 15px;
-  }
-
-  .form-control {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
-    margin-bottom: 8px;
-    font-family: inherit;
-  }
-
-  textarea.form-control {
-    min-height: 80px;
-    resize: vertical;
-  }
-
-  /* Keyword Actions */
-  .keyword-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-top: 10px;
-    gap: 10px;
-  }
-
-  /* Checkbox Styling */
-  .checkbox-inline {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    user-select: none;
-  }
-
-  /* Local toggle styling */
-  .local-toggle {
-    background-color: #f5f5f5;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-  }
-
-  .local-toggle:has(input:checked) {
-    background-color: #e6f7ff;
-  }
-
-  .local-label {
+  .tab-button.active {
+    color: #007bff;
     font-weight: 500;
   }
-
-  .hostname {
-    font-size: 12px;
-    color: #666;
+  
+  .tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #007bff;
+    animation: slideIn 0.3s ease;
   }
-
-  /* Keyword List */
-  .keywords-list {
-    margin-bottom: 20px;
+  
+  @keyframes slideIn {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
   }
-
-  /* Keyword Items */
-  .keyword-item {
-    margin-bottom: 15px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  
+  /* Add keyword form */
+  .keyword-form {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
   }
-
-  .keyword-name {
-    font-weight: bold;
-    color: #333;
+  
+  .form-group {
+    margin-bottom: 10px;
   }
-
-  /* Badge */
-  .badge {
-    background-color: #e2e6ea;
-    color: #495057;
-    padding: 3px 8px;
+  
+  #new-keyword, #keyword-xpath {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 12px;
-    font-weight: normal;
+    font-size: 14px;
+    box-sizing: border-box;
   }
-
-  /* Icon Buttons */
-  .icon-button {
+  
+  #keyword-xpath {
+    min-height: 80px;
+    max-height: 150px;
+    resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: monospace;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+  }
+  
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .checkbox-container {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f8f9fa;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+  
+  .checkbox-container input {
+    margin-right: 5px;
+  }
+  
+  .add-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  
+  .add-button i {
+    margin-right: 5px;
+  }
+  
+  /* Submit container */
+  .submit-container {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #ccc;
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+  
+  .submit-button {
+    background: none;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .delete-button {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 14px;
+    color: #333;
+  }
+  
+  /* Keywords list */
+  .keywords-list-container {
+    margin-top: 10px;
+  }
+  
+  .no-keywords {
+    text-align: center;
+    padding: 20px;
     color: #666;
-    padding: 4px;
+    font-style: italic;
+  }
+  
+  .keywords-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .keyword-item {
+    border: 1px solid #ddd;
     border-radius: 4px;
-    transition: all 0.2s;
+    margin-bottom: 10px;
+    overflow: hidden;
   }
-
-  .icon-button:hover {
-    background-color: rgba(0,0,0,0.05);
+  
+  .keyword-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #f8f9fa;
+    cursor: pointer;
   }
-
-  .delete-keyword:hover {
+  
+  .keyword-name {
+    font-weight: 500;
+  }
+  
+  .delete-keyword {
+    background: none;
+    border: none;
     color: #dc3545;
+    cursor: pointer;
   }
-
-  /* Keyword Details */
+  
   .keyword-details {
-    padding: 10px 12px;
-    border-top: 1px solid #eee;
+    padding: 15px;
+    border-top: 1px solid #ddd;
     display: flex;
     flex-direction: column;
-    gap: 10px;
   }
-
+  
   .keyword-details textarea {
     width: 100%;
     height: 80px;
-    padding: 8px;
-    border: 1px solid #ddd;
+
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
     border-radius: 4px;
-    font-family: monospace;
     resize: vertical;
   }
-
-  /* Empty State */
-  .empty-message {
-    padding: 15px;
-    text-align: center;
-    color: #666;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-  }
-
-  .helper-text {
-    font-size: 0.9em;
-    color: #6c757d;
-    margin-top: 5px;
-  }
-
-  /* Details Option */
-  .details-option {
+  
+  .keyword-details label {
     display: flex;
     align-items: center;
-    gap: 8px;
   }
   
-  /* Headers */
-  h2 {
-    font-size: 16px;
-    font-weight: bold;
-    margin: 10px 0;
-    color: #333;
+  .keyword-details input[type="checkbox"] {
+    margin-right: 8px;
   }
 </style>
