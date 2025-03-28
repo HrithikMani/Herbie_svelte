@@ -10,6 +10,7 @@
   let searchTerm = "";
   let activeTab = "global"; // 'global' or 'local'
   let currentHostname = "";
+  let isInspecting = false; // Track if inspection is active
 
   // Function to get current hostname and then load keywords
   onMount(() => {
@@ -43,18 +44,49 @@
         loadGlobalKeywords();
       }
     });
+    
+    // Check if there's a captured XPath from a previous inspection
+    chrome.storage.local.get({ capturedXPath: '' }, (result) => {
+      if (result.capturedXPath) {
+        newXpath = result.capturedXPath;
+        // Clear it after retrieving
+        chrome.storage.local.remove('capturedXPath');
+        // Also update the saved input
+        saveInputValues();
+      }
+    });
+    
+    // Listen for XPath updates while the popup is open
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === 'xpathCaptured') {
+        newXpath = message.xpath;
+        isInspecting = false;
+        // Save the new xpath to input values
+        saveInputValues();
+      }
+      if (message.action === 'inspectionCancelled') {
+        isInspecting = false;
+      }
+      if (message.action === 'updateXPathField') {
+        newXpath = message.xpath;
+        isInspecting = false;
+        // Save the new xpath to input values
+        saveInputValues();
+      }
+    });
   });
+
   const saveInputValues = () => {
-  // Save current input values to Chrome storage
-  chrome.storage.local.set({
-    keywordInput: {
-      keyword: newKeyword,
-      xpath: newXpath,
-      hasVariable: hasVariable,
-      isGlobal: isGlobal
-    }
-  });
-};
+    // Save current input values to Chrome storage
+    chrome.storage.local.set({
+      keywordInput: {
+        keyword: newKeyword,
+        xpath: newXpath,
+        hasVariable: hasVariable,
+        isGlobal: isGlobal
+      }
+    });
+  };
 
   // Split the loadKeywords function to handle global and local separately
   const loadGlobalKeywords = () => {
@@ -122,6 +154,8 @@
     newKeyword = "";
     newXpath = "";
     hasVariable = false;
+    // Save the reset form
+    saveInputValues();
   };
 
   const importKeywords = (event) => {
@@ -291,6 +325,27 @@
     URL.revokeObjectURL(url);
   };
 
+  // Handle inspect button click - NEW FUNCTION
+  const handleInspectClick = () => {
+    isInspecting = true;
+    
+    // Send message to background script to start inspection
+    chrome.runtime.sendMessage(
+      { action: 'startInspection' },
+      (response) => {
+        if (response && response.status === 'error') {
+          console.error("Error starting inspection:", response.message);
+          alert("Error starting inspection: " + response.message);
+          isInspecting = false;
+        } else {
+          console.log("Inspection started:", response);
+          // Close the popup to allow interaction with the page
+          window.close();
+        }
+      }
+    );
+  };
+
   // Filtered keywords based on search
   $: filteredGlobalKeywords = globalKeywords.filter(k => 
     k.keyword.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -309,8 +364,13 @@
   
   <!-- Action buttons -->
   <div class="action-buttons">
-    <button id="inspect-element" class="action-button">
-      <i class="fas fa-search"></i> Inspect
+    <button 
+      id="inspect-element" 
+      class="action-button {isInspecting ? 'inspecting' : ''}" 
+      on:click={handleInspectClick}
+      disabled={isInspecting}
+    >
+      <i class="fas fa-search"></i> {isInspecting ? 'Inspecting...' : 'Inspect'}
     </button>
     <input
       type="file"
@@ -352,7 +412,7 @@
       <textarea 
         bind:value={newXpath} 
         id="keyword-xpath" 
-        placeholder="Enter XPath" 
+        placeholder="Enter XPath or use Inspect to select an element" 
         aria-label="XPath Input"
         on:change={saveInputValues}
       ></textarea>
@@ -564,6 +624,16 @@
   .action-button:hover {
     background-color: #4a6a9b;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+  
+  .action-button.inspecting {
+    background-color: #28a745;
+  }
+
+  .action-button:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.7;
   }
   
   .action-button i {

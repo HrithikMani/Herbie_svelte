@@ -43,7 +43,8 @@
                 "content-scripts/dragdrop.js",
                 "content-scripts/test.json",
                 "content-scripts/userinteractions.js",
-                "content-scripts/usabilitytesting.js"
+                "content-scripts/usabilitytesting.js",
+                "content-scripts/inspector.js"
               ],  "type":"module"
         }
     ]

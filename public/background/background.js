@@ -247,3 +247,65 @@ chrome.webNavigation.onDOMContentLoaded.addListener((details) => {
 });
 
 
+// Add this to the background.js file
+
+// Handle messages from the popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'startInspection') {
+    // Get the active tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        const activeTab = tabs[0];
+        
+        // Send message to content script
+        chrome.tabs.sendMessage(
+          activeTab.id,
+          { action: 'enableInspector' },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.error("Error communicating with content script:", chrome.runtime.lastError.message);
+              sendResponse({ 
+                status: 'error', 
+                message: 'Failed to enable inspector: ' + chrome.runtime.lastError.message 
+              });
+            } else {
+              console.log('Response from content script:', response);
+              sendResponse(response);
+            }
+          }
+        );
+      } else {
+        sendResponse({ status: 'error', message: 'No active tab found' });
+      }
+    });
+    
+    return true; // Keep the message channel open for async response
+  }
+  
+  // Listen for XPath captured from content script
+  if (message.action === 'xpathCaptured') {
+    // Store the captured XPath in chrome.storage.local
+    chrome.storage.local.set({ capturedXPath: message.xpath }, () => {
+      console.log('XPath stored in storage:', message.xpath);
+      
+      // Forward the message to the popup if it's open
+      chrome.runtime.sendMessage({
+        action: 'updateXPathField',
+        xpath: message.xpath
+      });
+    });
+    
+    return true;
+  }
+  
+  if (message.action === 'inspectionCancelled') {
+    // Forward the cancellation message to the popup if it's open
+    chrome.runtime.sendMessage({
+      action: 'inspectionCancelled'
+    });
+    
+    return true;
+  }
+});
+
+
