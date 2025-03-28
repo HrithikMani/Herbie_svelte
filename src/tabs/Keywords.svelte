@@ -9,36 +9,75 @@
   let isGlobal = true; // Default to global
   let searchTerm = "";
   let activeTab = "global"; // 'global' or 'local'
-
-  // Function to get current hostname
   let currentHostname = "";
+
+  // Function to get current hostname and then load keywords
   onMount(() => {
+    chrome.storage.local.get("keywordInput", (result) => {
+    if (result.keywordInput) {
+      // Restore saved input values
+      newKeyword = result.keywordInput.keyword || "";
+      newXpath = result.keywordInput.xpath || "";
+      hasVariable = !!result.keywordInput.hasVariable;
+      isGlobal = result.keywordInput.isGlobal !== undefined ? 
+        result.keywordInput.isGlobal : true;
+    }
+   });
+  
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0] && tabs[0].url) {
         try {
-          currentHostname = new URL(tabs[0].url).hostname;
+          const url = new URL(tabs[0].url);
+          currentHostname = url.hostname;
+          console.log("Current hostname:", currentHostname);
+          
+          // Now that we have the hostname, load keywords
+          loadKeywords();
         } catch (e) {
           console.error("Error getting hostname:", e);
+          // Still load global keywords even if hostname fails
+          loadGlobalKeywords();
         }
+      } else {
+        // Still load global keywords if no tab is active
+        loadGlobalKeywords();
       }
     });
-    
-    // Load keywords
-    loadKeywords();
   });
+  const saveInputValues = () => {
+  // Save current input values to Chrome storage
+  chrome.storage.local.set({
+    keywordInput: {
+      keyword: newKeyword,
+      xpath: newXpath,
+      hasVariable: hasVariable,
+      isGlobal: isGlobal
+    }
+  });
+};
 
-  const loadKeywords = () => {
-    // Load global keywords
+  // Split the loadKeywords function to handle global and local separately
+  const loadGlobalKeywords = () => {
     chrome.storage.local.get({ globalKeywords: [] }, (result) => {
+      console.log("Loaded global keywords:", result.globalKeywords);
       globalKeywords = result.globalKeywords || [];
     });
-    
-    // Load local keywords for the current URL
+  };
+
+  const loadLocalKeywords = () => {
     if (currentHostname) {
       chrome.storage.local.get({ localKeywords: {} }, (result) => {
-        localKeywords = result.localKeywords[currentHostname] || [];
+        console.log("All local keywords:", result.localKeywords);
+        console.log("Current hostname for local keywords:", currentHostname);
+        localKeywords = (result.localKeywords && result.localKeywords[currentHostname]) || [];
+        console.log("Loaded local keywords for current site:", localKeywords);
       });
     }
+  };
+
+  const loadKeywords = () => {
+    loadGlobalKeywords();
+    loadLocalKeywords();
   };
 
   const addKeyword = () => {
@@ -145,14 +184,16 @@
     }
   };
 
-  const toggleDetails = (index, isGlobalKeyword = true) => {
-    const detailsId = isGlobalKeyword ? `global-details-${index}` : `local-details-${index}`;
-    const detailsElement = document.getElementById(detailsId);
-    if (detailsElement) {
-      detailsElement.style.display =
-        detailsElement.style.display === "none" ? "flex" : "none";
+  // Improved toggleDetails function with reactive binding
+  let visibleDetails = { global: null, local: null };
+
+  function toggleDetails(index, isGlobalKeyword = true) {
+    if (isGlobalKeyword) {
+      visibleDetails.global = visibleDetails.global === index ? null : index;
+    } else {
+      visibleDetails.local = visibleDetails.local === index ? null : index;
     }
-  };
+  }
 
   // Delete a keyword without confirmation dialog
   const deleteKeyword = (index, isGlobalKeyword = true) => {
@@ -230,6 +271,26 @@
     }
   };
 
+  // Export keywords function
+  const exportKeywords = () => {
+    const keywordsToExport = activeTab === 'global' ? globalKeywords : localKeywords;
+    
+    if (keywordsToExport.length === 0) {
+      alert('No keywords to export');
+      return;
+    }
+    
+    const blob = new Blob([JSON.stringify(keywordsToExport, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = activeTab === 'global' ? 'global-keywords.json' : `${currentHostname}-keywords.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Filtered keywords based on search
   $: filteredGlobalKeywords = globalKeywords.filter(k => 
     k.keyword.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -240,30 +301,6 @@
     k.keyword.toLowerCase().includes(searchTerm.toLowerCase()) || 
     k.xpath.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Function to submit (placeholder)
-  function handleSubmit() {
-    console.log("Form submitted");
-  }
-
-  // Delete all keywords (placeholder)
-  function handleDeleteAll() {
-    if (activeTab === "global") {
-      chrome.storage.local.set({ globalKeywords: [] }, () => {
-        globalKeywords = [];
-      });
-    } else {
-      if (currentHostname) {
-        chrome.storage.local.get({ localKeywords: {} }, (result) => {
-          const allLocalKeywords = result.localKeywords || {};
-          delete allLocalKeywords[currentHostname];
-          chrome.storage.local.set({ localKeywords: allLocalKeywords }, () => {
-            localKeywords = [];
-          });
-        });
-      }
-    }
-  }
 </script>
 
 <div id="tab4" class="tab-content active">
@@ -292,6 +329,7 @@
     <button
       id="export-keywords"
       class="action-button"
+      on:click={exportKeywords}
     >
       <i class="fas fa-file-export"></i> Export
     </button>
@@ -306,6 +344,7 @@
         id="new-keyword" 
         placeholder="Enter keyword" 
         aria-label="Keyword Input"
+        on:change={saveInputValues}
       >
     </div>
     
@@ -315,18 +354,19 @@
         id="keyword-xpath" 
         placeholder="Enter XPath" 
         aria-label="XPath Input"
+        on:change={saveInputValues}
       ></textarea>
     </div>
 
     <div class="form-actions">
       <div class="checkbox-group">
         <label class="checkbox-container">
-          <input bind:checked={hasVariable} type="checkbox" id="has-variable">
+          <input bind:checked={hasVariable} type="checkbox" id="has-variable" on:change={saveInputValues} >
           <span>Has Variable</span>
         </label>
         
         <label class="checkbox-container">
-          <input bind:checked={isGlobal} type="checkbox" id="global-keyword">
+          <input bind:checked={isGlobal} type="checkbox" id="global-keyword" on:change={saveInputValues}>
           <span>Global Keyword</span>
         </label>
       </div>
@@ -393,10 +433,10 @@
                 </div>
               </div>
         
+              <!-- Use reactive binding for showing/hiding details -->
               <div
-                id={`global-details-${index}`}
                 class="keyword-details"
-                style="display: none;"
+                style="display: {visibleDetails.global === index ? 'flex' : 'none'};"
               >
                 <textarea
                   class="xpath"
@@ -449,10 +489,10 @@
                 </div>
               </div>
         
+              <!-- Use reactive binding for showing/hiding details -->
               <div
-                id={`local-details-${index}`}
                 class="keyword-details"
-                style="display: none;"
+                style="display: {visibleDetails.local === index ? 'flex' : 'none'};"
               >
                 <textarea
                   class="xpath"
@@ -679,31 +719,6 @@
     margin-right: 5px;
   }
   
-  /* Submit container */
-  .submit-container {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border: 1px solid #ccc;
-    margin: 10px 0;
-    border-radius: 4px;
-  }
-  
-  .submit-button {
-    background: none;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  
-  .delete-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #333;
-  }
-  
   /* Keywords list */
   .keywords-list-container {
     margin-top: 10px;
@@ -727,6 +742,7 @@
     border-radius: 4px;
     margin-bottom: 10px;
     overflow: hidden;
+    margin: 10px;
   }
   
   .keyword-header {
@@ -759,7 +775,6 @@
   .keyword-details textarea {
     width: 100%;
     height: 80px;
-
     margin-bottom: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
