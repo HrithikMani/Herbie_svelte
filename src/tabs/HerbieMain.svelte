@@ -42,6 +42,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     EventEmitter.emit("logEvent", "Line: "+(message.data.line)+", "+message.data.desc);
     sendResponse({ status: "Popup updated" });
   }
+  if (message.action === "updatePopupResult") {
+    console.log("Message received in popup:", message.data);
+   
+   alert(message.data.value)
+  }
 });
 
 

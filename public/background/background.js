@@ -39,6 +39,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
     sendResponse({ status: "Message relayed to popup" });
   }
+
+  if(message.action==='updateResult'){
+    console.log("Message received in popup:", message.data);
+        chrome.runtime.sendMessage({
+          action: "updatePopupResult",
+          data: message.data,
+        });
+    sendResponse({ status: "Message relayed to popup" });
+  }
   
   if(message.action==='updateLog'){
     console.log("Message received in popup:", message.data);
@@ -160,15 +169,15 @@ async function processTestResults(taskId) {
 
 function sendTestResultsToTargetTab(testResults) {
   chrome.tabs.query({}, (tabs) => {
-      for (let tab of tabs) {
-          if (tab.url && tab.url.startsWith("http://localhost:5174/")) {
-              chrome.tabs.sendMessage(tab.id, { action: "updateUsabilityResults", data: testResults }, (response) => {
-                  console.log("Sent test results to:", tab.url, response);
-              });
-              return; // Stop after finding the first matching tab
-          }
+    for (let tab of tabs) {
+      if (tab.title && tab.title.includes("Usability Testing")) {
+        chrome.tabs.sendMessage(tab.id, { action: "updateUsabilityResults", data: testResults }, (response) => {
+          console.log("Sent test results to tab titled:", tab.title, response);
+        });
+        return; // Stop after finding the first matching tab
       }
-      console.log("No active tab found for http://localhost:5174/");
+    }
+    console.log("No active tab found with 'Usability Testing' in the title");
   });
 }
 
@@ -235,6 +244,68 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 chrome.webNavigation.onDOMContentLoaded.addListener((details) => {
   console.log("\nNavigating to :" + details.url + "\n");
  console.log(line)
+});
+
+
+// Add this to the background.js file
+
+// Handle messages from the popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'startInspection') {
+    // Get the active tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        const activeTab = tabs[0];
+        
+        // Send message to content script
+        chrome.tabs.sendMessage(
+          activeTab.id,
+          { action: 'enableInspector' },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.error("Error communicating with content script:", chrome.runtime.lastError.message);
+              sendResponse({ 
+                status: 'error', 
+                message: 'Failed to enable inspector: ' + chrome.runtime.lastError.message 
+              });
+            } else {
+              console.log('Response from content script:', response);
+              sendResponse(response);
+            }
+          }
+        );
+      } else {
+        sendResponse({ status: 'error', message: 'No active tab found' });
+      }
+    });
+    
+    return true; // Keep the message channel open for async response
+  }
+  
+  // Listen for XPath captured from content script
+  if (message.action === 'xpathCaptured') {
+    // Store the captured XPath in chrome.storage.local
+    chrome.storage.local.set({ capturedXPath: message.xpath }, () => {
+      console.log('XPath stored in storage:', message.xpath);
+      
+      // Forward the message to the popup if it's open
+      chrome.runtime.sendMessage({
+        action: 'updateXPathField',
+        xpath: message.xpath
+      });
+    });
+    
+    return true;
+  }
+  
+  if (message.action === 'inspectionCancelled') {
+    // Forward the cancellation message to the popup if it's open
+    chrome.runtime.sendMessage({
+      action: 'inspectionCancelled'
+    });
+    
+    return true;
+  }
 });
 
 

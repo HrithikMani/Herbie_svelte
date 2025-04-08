@@ -1,4 +1,5 @@
 async function execute(operation, element, delay, value = null) {
+    console.log(operation);
     if(value){
         value = value.replace(/^'|'$/g, '');
     }
@@ -24,8 +25,10 @@ async function execute(operation, element, delay, value = null) {
                     break;
 
                 case 'press':
-                case 'type': // Same logic as 'press'
+                case 'type': 
+         
                     if (element) {
+                        
                         if (value !== null && value !== undefined) {
                             console.log(`Entering "${value}" into the element`);
                             console.log(element);
@@ -53,7 +56,7 @@ async function execute(operation, element, delay, value = null) {
 
                 case 'verify':
                     // Placeholder for future functionality
-                    console.log("Verification logic will be implemented later.");
+                
                     break;
 
                 case 'select':

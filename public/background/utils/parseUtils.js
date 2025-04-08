@@ -2,12 +2,16 @@ import { ParseScript } from '../../parser/parser.js';
 
 export async function handleParseLine(scriptContent, sendResponse) {
   try {
+    // Get the current URL for local keyword context
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const currentUrl = tabs.length > 0 ? tabs[0].url : '';
+    
     // Select the first line from the input
     const firstLine = scriptContent.split('\n')[0].trim();
     console.log('Parsing single line:', firstLine);
 
-    // Parse the first line
-    const result = await ParseScript(firstLine);
+    // Pass the current URL for local keyword context
+    const result = await ParseScript(firstLine, currentUrl);
     console.log('Parsed result:', result);
 
     // Send success response
@@ -20,10 +24,14 @@ export async function handleParseLine(scriptContent, sendResponse) {
 
 export async function handleParseScript(scriptContent, sendResponse) {
   try {
+    // Get the current URL for local keyword context
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const currentUrl = tabs.length > 0 ? tabs[0].url : '';
+    
     console.log('Parsing entire script:', scriptContent);
 
-    // Pass the entire script to ParseScript
-    const result = await ParseScript(scriptContent);
+    // Pass the current URL for local keyword context
+    const result = await ParseScript(scriptContent, currentUrl);
     console.log('Parsed script result:', result);
 
     // Send success response

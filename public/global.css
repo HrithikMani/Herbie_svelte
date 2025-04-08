@@ -425,25 +425,7 @@ body {
 }
 
 
-#keywords-container {
-  margin-top: 20px;
-}
 
-#keywords-container input[type="text"],
-#keywords-container label {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-right: 10px;
-  width: 200px;
-}
-
-#keywords-container label {
-  display: inline-flex;
-  align-items: center;
-  font-size: 14px;
-  margin-right: 20px;
-}
 
 
 
@@ -564,20 +546,6 @@ body {
   white-space: nowrap; /* Prevent the tag from wrapping */
 }
 
-#keyword-xpath {
-  font-size: 16px; /* Increased font size for better readability */
-  font-family: monospace; /* Monospace font for better alignment of code */
-  height: 80px; /* Height to show multiple lines */
-  width: 100%; /* Max width of the container */
-  resize: none; /* Disable resizing */
-  overflow-y: scroll; /* Enable vertical scrolling */
-  padding: 10px;
-  margin: 5px 10px 5px 0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box; /* Include padding in width/height calculations */
-  white-space: pre-wrap; /* Ensure long lines break and are visible */
-}
 
 /* Highlight the variable placeholder {$} */
 textarea::selection {
@@ -589,16 +557,6 @@ textarea::selection {
   font-weight: bold;
 }
 
-/* Increase font size specifically for the new-keyword input */
-#new-keyword {
-  font-size: 17px; /* Adjust to your desired size */
-  font-family: Arial, sans-serif; /* Ensure consistent font styling */
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-  width: 100%;
-}
 
 
 
@@ -607,61 +565,28 @@ textarea::selection {
 
 
 
-/* Styling for the keyword items */
-.keyword-item {
-  padding: 10px;
-  margin-bottom: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background-color: #f9f9f9;
-  list-style-type: none; /* Remove bullet points */
-}
-
-.keyword-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer; /* Indicate that the header is clickable */
-}
-
-.keyword-name {
-  font-size: 16px;
-  font-weight: bold;
-  flex-grow: 1;
-}
-
-.keyword-actions {
-  display: flex;
-  align-items: center;
-}
-
-.keyword-actions button {
-  background-color: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.keyword-actions button:hover {
-  color: #c82333;
-}
 
 
 
-.keyword-details.active {
-  display: flex;
-  flex-direction: column; /* Ensure elements are stacked vertically */
-}
 
 
 
-.keyword-details label {
-  display: block; /* Ensure checkbox is on its own line */
-  margin-top: 5px;
-}
 
-.keyword-details label input[type="checkbox"] {
-  margin-right: 10px;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* Remove bullet points from the ul element */
 ul {
@@ -669,47 +594,22 @@ ul {
   list-style-type: none; /* Remove bullet points */
 }
 
-.keyword-details.active {
-  display: flex;
-}
-.keyword-details {
-  display: none;
-  padding-top: 10px;
-  border-top: 1px solid #ccc;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* Prevent contents from overflowing the container */
-}
 
-.keyword-details textarea {
-  width: 100%;
-  height: 120px; /* Increase the height of the textarea */
-  font-size: 16px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  resize: none; /* Disable resizing */
-  margin-bottom: 10px;
-  box-sizing: border-box; /* Ensure padding is included in the width/height */
-  overflow-y: auto; /* Allow vertical scrolling if content overflows */
-}
 
-.keywords-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Align the buttons to the right */
-  margin-bottom: 10px;
-}
 
-.keywords-title {
-  margin: 0;
-  font-size: 24px;
-}
 
-.keywords-buttons {
-  display: flex;
-  gap: 10px; /* Adjust the spacing between buttons */
-}
+
+
+
+
+
+
+
+
+
+
+
+
 
 .btn-primary, .btn-secondary {
   display: flex;
@@ -736,11 +636,7 @@ ul {
   margin-bottom: 15px; /* Add some space below the form group */
 }
 
-.keyword-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px; /* Space between the checkbox and button */
-}
+
 
 .checkbox-inline {
   margin: 0; /* Remove margin to align with the button */
@@ -751,21 +647,6 @@ ul {
 }
 
 
-#search-keyword {
-  margin-top: 15px; /* Add space above the search input */
-  padding: 10px; /* Add padding for better touch/click area */
-  width: 100%; /* Full width within the container */
-  border: 1px solid #ccc; /* Light gray border */
-  border-radius: 4px; /* Rounded corners */
-  font-size: 16px; /* Consistent font size */
-  box-sizing: border-box; /* Ensure padding doesn't affect the width */
-}
-
-#search-keyword:focus {
-  border-color: #007bff; /* Blue border on focus */
-  outline: none; /* Remove default focus outline */
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Subtle shadow on focus */
-}
 
 
 .dropdown-container {

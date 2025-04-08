@@ -19,7 +19,7 @@
 	  tab4: Keywords,
 	  tab5: RecordTab,
 	  tab6: UsabilityTesting,
-	//   tab7:InjectHerbie
+	  tab7:InjectHerbie
 	};
   
 	// Reactive assignment to update CurrentTab
