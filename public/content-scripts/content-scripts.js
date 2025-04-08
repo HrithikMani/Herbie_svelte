@@ -72,11 +72,7 @@ async function executeCommands(startLine, cmdtree) {
       var verItem =  element.innerText.trim();
       var verifyAgainst = item.verify[4].trim();
   
-        if(verItem==verifyAgainst){
-         alert("Test Passed")
-        }else{
-          alert("Test Failed")
-        }
+       
      
       
     }else{
