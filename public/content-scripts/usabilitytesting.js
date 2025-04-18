@@ -42,6 +42,7 @@ window.addEventListener("message", (event) => {
 
         // Update the attribute with JSON string
         resultDiv.setAttribute("data-test-results", JSON.stringify(message.data));
+        console.log("data-test-results"+ JSON.stringify(message.data));
 
         sendResponse({ status: "Test results rendered successfully" });
     }

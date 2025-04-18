@@ -59,9 +59,7 @@
         chrome.runtime.sendMessage({
             action: "endUsabilityTest",
             taskId: usabilityTest.taskId,
-            herbieScript: herbieScript,
-            verifyCommands: verifyCommands,
-            herbieScriptParsed: herbieScriptParsed
+            time : formatTime(elapsedTime)
         });
 
         chrome.storage.local.remove("usabilityTest", () => {

@@ -228,10 +228,8 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
       let testResults =  {
         "taskId": message.taskId,
-        "time": 42,
-        "steps": "Matched: click on 'sidemenu', click on 'Patient Registration' 'link'",
-        "errors": "Missed Steps: click on 'E-Chart' 'sidemenu tab'",
-        "rating": 4
+        "time": message.time,
+        
     };
       
     
