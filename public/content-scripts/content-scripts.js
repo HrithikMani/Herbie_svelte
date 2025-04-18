@@ -123,17 +123,20 @@ async function executeCommands(startLine, cmdtree) {
     
     const item = cmdtree[i];
     const action = item.code[0]; // Action type (e.g., "type", "click")
-    const value = (action === "type" || action === "select") ? 
-      item.code[1].replace(/"/g, "") : null; // Value to type
+    
+    // Fix: Extract value properly for verify commands too
+    const value = (action === "type" || action === "select" || action === "verify") ? 
+      item.code[1] ? item.code[1].replace(/"/g, "") : null : null;
+    
     const xpath = item.code.indexOf("in") > -1 ? 
       item.code[item.code.indexOf("in") + 1] : null; // Extract XPath
-    const delay = item.timeout || 1000; // Default delay
+    const delay = item.timeout || 500; // Default delay
     
     console.log(`Executing action: ${action}, Value: ${value}, XPath: ${xpath}, Delay: ${delay}`);
     
     try {
       if (action === 'verify') {
-        // Handle verify actions
+        // Handle verify actions - now passing the correct XPath
         await handleVerification(item, xpath, delay, value);
       } else {
         let element = null;
