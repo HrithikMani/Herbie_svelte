@@ -164,6 +164,11 @@ async function parseStatement(stmt, cmd) {
  * @param {string} verifyStatement - The full verification statement to parse
  * @param {object} cmd - The command object to update with verification properties
  */
+/**
+ * Parse verification statements and extract verification properties
+ * @param {string} verifyStatement - The full verification statement to parse
+ * @param {object} cmd - The command object to update with verification properties
+ */
 function parseVerificationStatement(verifyStatement, cmd) {
     // Initialize verification properties
     cmd.verifyType = null;
@@ -174,8 +179,9 @@ function parseVerificationStatement(verifyStatement, cmd) {
     console.log("Parsing verification statement:", verifyStatement);
     
     // For text verification (most common)
-    // Example: verify text equals "Welcome" in "#header"
-    const textVerifyRegex = /verify\s+(?:that\s+)?(?:the\s+)?text(?:\s+of\s+([^]+?))?\s+(equals|contains|starts\s+with|ends\s+with)\s+["']([^"']+)["']\s*(?:in\s+["']([^"']+)["'])?/i;
+    // Example: verify text equals "Welcome" in "//*[@id='header']"
+    // Updated regex to better handle XPath with quotes and special characters
+    const textVerifyRegex = /verify\s+(?:that\s+)?(?:the\s+)?text(?:\s+of\s+([^]+?))?\s+(equals|contains|starts\s+with|ends\s+with)\s+["']([^"']+)["']\s*(?:in\s+["']([^"]*(?:(?:'[^']*'|"[^"]*")[^"']*)*)["'])?/i;
     let match = verifyStatement.match(textVerifyRegex);
     
     if (match) {
@@ -185,16 +191,15 @@ function parseVerificationStatement(verifyStatement, cmd) {
         cmd.verifyExpected = match[3];
         cmd.verifyLocator = match[4] || null;
         
-        // Update the code array with the correct format
+        // Fix the command structure to ensure it has the correct elements in the right order
+        // First, reset the basic command structure
+        cmd.code = ["verify"];
+        
+        // Add the expected text (always the second element in a verify command)
+        cmd.code.push(`"${cmd.verifyExpected}"`);
+        
+        // Add the locator if present
         if (cmd.verifyLocator) {
-            // Make sure we don't have duplicate "in" entries
-            const inIndex = cmd.code.indexOf("in");
-            if (inIndex > -1) {
-                // Remove all elements after "in" (including "in" itself)
-                cmd.code = cmd.code.slice(0, inIndex);
-            }
-            
-            // Add the correct locator
             cmd.code.push("in");
             cmd.code.push(`"${cmd.verifyLocator}"`);
         }
@@ -203,7 +208,8 @@ function parseVerificationStatement(verifyStatement, cmd) {
             type: cmd.verifyType,
             operator: cmd.verifyOperator,
             expected: cmd.verifyExpected,
-            locator: cmd.verifyLocator
+            locator: cmd.verifyLocator,
+            code: cmd.code
         });
         
         return;
@@ -211,7 +217,7 @@ function parseVerificationStatement(verifyStatement, cmd) {
     
     // For attribute verification
     // Example: verify value equals "John" in "input[name='firstname']"
-    const attrVerifyRegex = /verify\s+(?:that\s+)?(?:the\s+)?(value|placeholder)(?:\s+of\s+([^]+?))?\s+(equals|contains|starts\s+with|ends\s+with)\s+["']([^"']+)["']\s*(?:in\s+["']([^"']+)["'])?/i;
+    const attrVerifyRegex = /verify\s+(?:that\s+)?(?:the\s+)?(value|placeholder)(?:\s+of\s+([^]+?))?\s+(equals|contains|starts\s+with|ends\s+with)\s+["']([^"']+)["']\s*(?:in\s+["']([^"]*(?:(?:'[^']*'|"[^"]*")[^"']*)*)["'])?/i;
     match = verifyStatement.match(attrVerifyRegex);
     
     if (match) {
@@ -221,13 +227,11 @@ function parseVerificationStatement(verifyStatement, cmd) {
         cmd.verifyExpected = match[4];
         cmd.verifyLocator = match[5] || null;
         
-        // Update the code array
+        // Reset the command structure
+        cmd.code = ["verify"];
+        cmd.code.push(`"${cmd.verifyExpected}"`);
+        
         if (cmd.verifyLocator) {
-            const inIndex = cmd.code.indexOf("in");
-            if (inIndex > -1) {
-                cmd.code = cmd.code.slice(0, inIndex);
-            }
-            
             cmd.code.push("in");
             cmd.code.push(`"${cmd.verifyLocator}"`);
         }
@@ -236,7 +240,8 @@ function parseVerificationStatement(verifyStatement, cmd) {
             type: cmd.verifyType,
             operator: cmd.verifyOperator,
             expected: cmd.verifyExpected,
-            locator: cmd.verifyLocator
+            locator: cmd.verifyLocator,
+            code: cmd.code
         });
         
         return;
@@ -244,7 +249,7 @@ function parseVerificationStatement(verifyStatement, cmd) {
     
     // For state verification
     // Example: verify state is visible in "#submit-button"
-    const stateVerifyRegex = /verify\s+(?:that\s+)?(?:the\s+)?state(?:\s+of\s+([^]+?))?\s+is\s+(visible|enabled|checked|disabled|hidden)\s*(?:in\s+["']([^"']+)["'])?/i;
+    const stateVerifyRegex = /verify\s+(?:that\s+)?(?:the\s+)?state(?:\s+of\s+([^]+?))?\s+is\s+(visible|enabled|checked|disabled|hidden)\s*(?:in\s+["']([^"]*(?:(?:'[^']*'|"[^"]*")[^"']*)*)["'])?/i;
     match = verifyStatement.match(stateVerifyRegex);
     
     if (match) {
@@ -254,13 +259,11 @@ function parseVerificationStatement(verifyStatement, cmd) {
         cmd.verifyExpected = match[2].toLowerCase();
         cmd.verifyLocator = match[3] || null;
         
-        // Update the code array
+        // Reset the command structure
+        cmd.code = ["verify"];
+        cmd.code.push(`"${cmd.verifyExpected}"`);
+        
         if (cmd.verifyLocator) {
-            const inIndex = cmd.code.indexOf("in");
-            if (inIndex > -1) {
-                cmd.code = cmd.code.slice(0, inIndex);
-            }
-            
             cmd.code.push("in");
             cmd.code.push(`"${cmd.verifyLocator}"`);
         }
@@ -269,7 +272,8 @@ function parseVerificationStatement(verifyStatement, cmd) {
             type: cmd.verifyType,
             operator: cmd.verifyOperator,
             expected: cmd.verifyExpected,
-            locator: cmd.verifyLocator
+            locator: cmd.verifyLocator,
+            code: cmd.code
         });
         
         return;
@@ -285,10 +289,43 @@ function parseVerificationStatement(verifyStatement, cmd) {
         cmd.verifyOperator = match[2].replace(/\s+/g, '_');
         cmd.verifyExpected = match[3];
         
+        // Reset command structure for page verification
+        cmd.code = ["verify"];
+        cmd.code.push(`"${cmd.verifyExpected}"`);
+        
         console.log("Parsed page verification:", {
             type: cmd.verifyType,
             operator: cmd.verifyOperator,
-            expected: cmd.verifyExpected
+            expected: cmd.verifyExpected,
+            code: cmd.code
+        });
+        
+        return;
+    }
+    
+    // If no pattern matched, try a simpler fallback approach
+    // This is a last resort for compatibility with existing scripts
+    const simplifiedVerifyRegex = /verify\s+["']([^"']+)["']\s+in\s+["']([^"]*(?:(?:'[^']*'|"[^"]*")[^"']*)*)["']/i;
+    match = verifyStatement.match(simplifiedVerifyRegex);
+    
+    if (match) {
+        cmd.verifyType = 'text';
+        cmd.verifyOperator = 'contains';
+        cmd.verifyExpected = match[1];
+        cmd.verifyLocator = match[2];
+        
+        // Reset command structure
+        cmd.code = ["verify"];
+        cmd.code.push(`"${cmd.verifyExpected}"`);
+        cmd.code.push("in");
+        cmd.code.push(`"${cmd.verifyLocator}"`);
+        
+        console.log("Parsed simplified verification:", {
+            type: cmd.verifyType,
+            operator: cmd.verifyOperator,
+            expected: cmd.verifyExpected,
+            locator: cmd.verifyLocator,
+            code: cmd.code
         });
         
         return;
@@ -297,16 +334,37 @@ function parseVerificationStatement(verifyStatement, cmd) {
     // If we got here, we couldn't parse the verification statement properly
     console.warn("Could not parse verification statement:", verifyStatement);
     
-    // Default fallback
-    cmd.code.push('in');
+    // Default fallback - preserve existing code array structure
+    if (cmd.code.indexOf('in') === -1) {
+        cmd.code.push('in');
+    }
 }
-
+// Process a command for keyword replacements
 // Process a command for keyword replacements
 async function processCommandKeywords(cmd, globalKeywords, pageLocalKeywords) {
     // Find the "in" clause in the command
     const inClauseIndex = cmd.code.indexOf('in');
     if (inClauseIndex === -1 || inClauseIndex + 1 >= cmd.code.length) {
         return; // No "in" clause or nothing after it
+    }
+    
+    // For verify commands, make sure we're working with a clean command structure first
+    if (cmd.code[0] === "verify") {
+        // Normalize the verify command structure - should be:
+        // ["verify", "expected value", "in", "locator"]
+        const expectedValue = cmd.code[1]; // Preserve the expected value
+        
+        // Check if we have duplicates in the array
+        const allInIndexes = [];
+        cmd.code.forEach((item, index) => {
+            if (item === "in") allInIndexes.push(index);
+        });
+        
+        // If we have more than one "in", clean up the command
+        if (allInIndexes.length > 1) {
+            // Keep only the first occurrence of "in" and the next item
+            cmd.code = cmd.code.slice(0, allInIndexes[0] + 2);
+        }
     }
     
     // Get the target element reference (might be a keyword)
@@ -343,7 +401,7 @@ async function processCommandKeywords(cmd, globalKeywords, pageLocalKeywords) {
             
             let updatedXpath = foundKeyword.xpath;
             
-            // For 'type' commands, skip the first variable (it's the input value)
+            // For 'type', 'verify', 'select' commands, skip the first variable (it's the input value)
             const relevantVariables = (cmd.code[0] === "type" || cmd.code[0] === "verify" || cmd.code[0] === "select") 
                 ? variables.slice(1) 
                 : variables;
@@ -354,13 +412,22 @@ async function processCommandKeywords(cmd, globalKeywords, pageLocalKeywords) {
             
             // Update the command with the substituted XPath
             cmd.code[inClauseIndex + 1] = updatedXpath;
+            
+            // Also update verifyLocator if this is a verify command
+            if (cmd.code[0] === "verify" && cmd.verifyLocator) {
+                cmd.verifyLocator = updatedXpath;
+            }
         } else {
             // Simple replacement with the XPath
             cmd.code[inClauseIndex + 1] = foundKeyword.xpath;
+            
+            // Also update verifyLocator if this is a verify command
+            if (cmd.code[0] === "verify" && cmd.verifyLocator) {
+                cmd.verifyLocator = foundKeyword.xpath;
+            }
         }
     } else {
         console.log(`No keyword found for "${targetRef}"`);
     }
 }
-
 export { ParseScript };

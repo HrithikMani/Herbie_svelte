@@ -365,7 +365,25 @@ function verifyUrl(command) {
  * Checks if an element is visible in the DOM
  */
 function isElementVisible(element) {
-    return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+    if (!element) return false;
+    
+    // Check for physical dimensions first
+    const hasSize = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+    
+    // If it has no size, it's definitely not visible
+    if (!hasSize) return false;
+    
+    // Get computed style to check visibility properties
+    const computedStyle = window.getComputedStyle(element);
+    
+    // Check CSS visibility properties
+    return !(
+        computedStyle.display === 'none' || 
+        computedStyle.visibility === 'hidden' || 
+        computedStyle.opacity === '0' ||
+        // Check if element or any ancestor has 'hidden' class
+        element.closest('.hidden') !== null
+    );
 }
 
 /**
