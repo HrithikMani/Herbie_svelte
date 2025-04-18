@@ -6,6 +6,7 @@
     let elapsedTime = 0;
     let startTime = 0;
     let interval;
+    let showScript = false; // Toggle for showing/hiding Herbie script
   
     function loadUsabilityTest() {
         chrome.storage.local.get(null, (items) => {
@@ -15,6 +16,7 @@
   
             if (tests.length > 0) {
                 usabilityTest = tests[0]; 
+                console.log("Loaded usability test:", usabilityTest);
                 isRunning = true;
                 startTime = usabilityTest.startTime || Date.now();
                 startStopwatch();
@@ -32,29 +34,50 @@
         clearInterval(interval);
     }
   
-    
     function endTest() {
-    if (!isRunning) return;
-    isRunning = false;
-    stopStopwatch();
+        if (!isRunning) return;
+        isRunning = false;
+        stopStopwatch();
 
-    chrome.runtime.sendMessage({
-        action: "endUsabilityTest",
-        taskId: usabilityTest.taskId
-    });
+        // Check if we have a Herbie script and parsed script
+        const herbieScript = usabilityTest.herbieScript || '';
+        const herbieScriptParsed = usabilityTest.herbieScriptParsed || [];
+        
+        console.log("Ending test with Herbie script:", herbieScript);
+        console.log("Parsed Herbie script commands:", herbieScriptParsed);
 
-    chrome.storage.local.remove("usabilityTest", () => {
-        usabilityTest = null;
-    });
+        // Find verification commands for usability validation
+        const verifyCommands = herbieScript
+            ? herbieScript.split('\n')
+                .filter(line => line.trim().startsWith('verify'))
+                .join('\n')
+            : '';
+
+        console.log("Verification commands:", verifyCommands);
+
+        // Send both with the endUsabilityTest message
+        chrome.runtime.sendMessage({
+            action: "endUsabilityTest",
+            taskId: usabilityTest.taskId,
+            herbieScript: herbieScript,
+            verifyCommands: verifyCommands,
+            herbieScriptParsed: herbieScriptParsed
+        });
+
+        chrome.storage.local.remove("usabilityTest", () => {
+            usabilityTest = null;
+        });
     }
-
-
   
     function formatTime(ms) {
         const minutes = Math.floor(ms / 60000);
         const seconds = Math.floor((ms % 60000) / 1000);
         const milliseconds = Math.floor((ms % 1000) / 10);
         return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(2, '0')}`;
+    }
+    
+    function toggleScript() {
+        showScript = !showScript;
     }
   
     onMount(() => {
@@ -64,15 +87,15 @@
     onDestroy(() => {
         stopStopwatch();
     });
-  </script>
+</script>
   
-  <!-- 🟢 Usability Testing Tab UI -->
-  <div id="usability-test">
+<!-- 🟢 Usability Testing Tab UI -->
+<div id="usability-test">
     <h1>Usability Testing Mode</h1>
   
     {#if usabilityTest}
         <div class="test-details">
-            <h2> {usabilityTest.taskName}</h2>
+            <h2>{usabilityTest.taskName}</h2>
             <p class="description"><i class="fas fa-info-circle"></i> {usabilityTest.description}</p>
   
             <!-- Centered Stopwatch -->
@@ -81,6 +104,20 @@
             </div>
   
             <p class="start-time"><i class="fas fa-clock"></i> Start Time: {new Date(usabilityTest.startTime).toLocaleString()}</p>
+            
+            <!-- Show Script Toggle Button -->
+            <button class="toggle-script-btn" on:click={toggleScript}>
+                <i class="fas {showScript ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                {showScript ? 'Hide Herbie Script' : 'Show Herbie Script'}
+            </button>
+            
+            <!-- Herbie Script Display (conditionally rendered) -->
+            {#if showScript && usabilityTest.herbieScript}
+                <div class="herbie-script-container">
+                    <h3>Herbie Script</h3>
+                    <pre class="herbie-script">{usabilityTest.herbieScript}</pre>
+                </div>
+            {/if}
   
             <button class="button-end" on:click={endTest}>
                 <i class="fas fa-times-circle"></i> End Test
@@ -89,11 +126,10 @@
     {:else}
         <p class="no-test"><i class="fas fa-exclamation-triangle"></i> No usability test found.</p>
     {/if}
-  </div>
+</div>
   
-  <!-- 🟢 Styling -->
-  <style>
-   
+<!-- 🟢 Styling -->
+<style>
    #usability-test {
     padding: 20px;
     width: 360px;
@@ -161,6 +197,7 @@ h1 {
     transition: 0.3s;
     width: 100%; /* Makes the button full width */
     max-width: 200px;
+    margin-top: 15px;
 }
 
 .button-end:hover {
@@ -177,39 +214,87 @@ h1 {
 }
 
 .test-results {
-            background: #f9f9f9;
-            border-left: 5px solid #34d399;
-            padding: 12px;
-            margin-top: 10px;
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease-in-out;
-        }
-        .test-results:hover {
-            transform: scale(1.02);
-        }
-        .test-results-header {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2d6a4f;
-            margin-bottom: 8px;
-        }
-        .test-results-content p {
-            font-size: 14px;
-            margin: 5px 0;
-        }
-        .highlight {
-            font-weight: bold;
-            color: #2563eb;
-        }
-        .highlight.error {
-            color: #dc2626;
-        }
-        .rating {
-            font-size: 18px;
-            color: #f59e0b;
-        }
+    background: #f9f9f9;
+    border-left: 5px solid #34d399;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 8px;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
 
-  </style>
-  
+.test-results:hover {
+    transform: scale(1.02);
+}
+
+.test-results-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2d6a4f;
+    margin-bottom: 8px;
+}
+
+.test-results-content p {
+    font-size: 14px;
+    margin: 5px 0;
+}
+
+.highlight {
+    font-weight: bold;
+    color: #2563eb;
+}
+
+.highlight.error {
+    color: #dc2626;
+}
+
+.rating {
+    font-size: 18px;
+    color: #f59e0b;
+}
+
+/* Script display styling */
+.toggle-script-btn {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+.toggle-script-btn:hover {
+    background-color: #5a6268;
+}
+
+.herbie-script-container {
+    margin-top: 15px;
+    width: 100%;
+    text-align: left;
+}
+
+.herbie-script-container h3 {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #495057;
+}
+
+.herbie-script {
+    background-color: #f3f3f3;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    max-height: 150px;
+    overflow-y: auto;
+    text-align: left;
+    color: #212529;
+    margin-bottom: 15px;
+}
+</style>

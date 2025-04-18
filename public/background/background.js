@@ -187,29 +187,29 @@ let usabilityHerbieScriptParsed=null;
 chrome.runtime.onMessage.addListener(async(message, sender, sendResponse) => {
   console.log("Received message from content script:", message);
   if (message.action === "startUsabilityTest") {
+    // Parse the Herbie script
+    usabilityHerbieScript = message.testHerbieScript;
+    usabilityHerbieScriptParsed = await ParseScript(usabilityHerbieScript);
+    console.log(usabilityHerbieScriptParsed);
+    
+    // Create test details with both raw and parsed scripts
     const testDetails = {
         taskId: message.taskId,
         taskName: message.taskName,
         description: message.description,
         status: "in-progress",
-        startTime: Date.now()
+        startTime: Date.now(),
+        herbieScript: usabilityHerbieScript,           // Store the raw script
+        herbieScriptParsed: usabilityHerbieScriptParsed // Store the parsed script
     };
-    usabilityHerbieScript = message.testHerbieScript;
-  
-    usabilityHerbieScriptParsed = await ParseScript(usabilityHerbieScript);
-    console.log(usabilityHerbieScriptParsed);
-
+    
+    // Save to Chrome storage
     chrome.storage.local.set({ [`usabilityTest`]: testDetails }, () => {
         console.log(`Stored usability test: ${message.taskId}`);
     });
-
+    
     sendResponse({ status: "success", message: `Usability test started for ${message.taskId}` });
   }
-
-
-
- 
-
 });
 
 
