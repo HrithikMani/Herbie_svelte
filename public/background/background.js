@@ -66,8 +66,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if(message.action  ==="verifyStatement"){
-      verifyStmpts[message.data]=true;
-    
+      //verifyStmpts[message.data]=alse;
+      if(message.result){
+        verifyStmpts[message.data]=message.result.message;
+      }
   }
   return true; 
 });
