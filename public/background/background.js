@@ -4,6 +4,7 @@ import {handleRunScript,handleExecuteScript} from './utils/runUtils.js';
 
 let line = 0;
 let cmdtree= null;
+let verifyStmpts = {};
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'parseLine') {
     (async () => {
@@ -62,6 +63,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if(message.action === 'executeScriptFromInject'){
     console.log("Hi frominjected herbie")
     sendResponse({ status: "Hi from bg" });
+  }
+
+  if(message.action  ==="verifyStatement"){
+      verifyStmpts[message.data]=true;
+    
   }
   return true; 
 });
@@ -229,13 +235,37 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       let testResults =  {
         "taskId": message.taskId,
         "time": message.time,
+        "verify_statements": JSON.stringify(verifyStmpts),
         
     };
       
     
       sendTestResultsToTargetTab(testResults);
+      for (const key in verifyStmpts) {
+        if (Object.prototype.hasOwnProperty.call(verifyStmpts, key)) {
+          delete verifyStmpts[key];
+        }
+      }
+      
 
       sendResponse({ status: "Test results processed and sent." });
+  }
+  if(message.action ==="setObserver"){
+    
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs.length === 0 || !tabs[0].id) {
+            console.error("No active tab found");
+            sendResponse({ status: 'error', message: 'No active tab found' });
+            return null;
+        }
+        const activeTabId = tabs[0].id;
+        const currentUrl = tabs.length > 0 ? tabs[0].url : '';
+       
+        const result = await ParseScript(message.herbie_script, currentUrl); 
+        console.log(result);
+    chrome.tabs.sendMessage(
+      activeTabId,
+      { action: 'setObserver',   herbie_object:result})
   }
 });
 

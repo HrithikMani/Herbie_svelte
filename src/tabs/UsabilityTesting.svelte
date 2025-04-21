@@ -20,6 +20,11 @@
                 isRunning = true;
                 startTime = usabilityTest.startTime || Date.now();
                 startStopwatch();
+                chrome.runtime.sendMessage({
+                action: "setObserver",
+                herbie_script: usabilityTest.herbieScript,
+                
+                });
             }
         });
     }
