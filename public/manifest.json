@@ -36,15 +36,21 @@
             "matches": ["<all_urls>"],
             "js":[
          
-                "dist/mie-simulijs.js",
-                "content-scripts/execute.js",
-                "content-scripts/findelement.js",
-                "content-scripts/content-scripts.js",
-                "content-scripts/dragdrop.js",
-                "content-scripts/test.json",
-                "content-scripts/userinteractions.js",
-                "content-scripts/usabilitytesting.js",
-                "content-scripts/inspector.js"
+              "dist/mie-simulijs.js",
+              "content-scripts/execute.js",
+              "content-scripts/findelement.js",
+              "content-scripts/textVerification.js",
+              "content-scripts/attributeVerification.js",
+              "content-scripts/stateVerification.js",
+              "content-scripts/pageVerification.js",
+              "content-scripts/verificationManager.js",
+              "content-scripts/verificationIntegration.js",
+              "content-scripts/content-scripts.js",
+              "content-scripts/dragdrop.js",
+              "content-scripts/test.json",
+              "content-scripts/userinteractions.js",
+              "content-scripts/usabilitytesting.js",
+              "content-scripts/inspector.js"
               ],  "type":"module"
         }
     ]
