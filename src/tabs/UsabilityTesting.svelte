@@ -40,37 +40,32 @@
     }
   
     function endTest() {
-        if (!isRunning) return;
-        isRunning = false;
-        stopStopwatch();
+    if (!isRunning) return;
+    isRunning = false;
+    stopStopwatch();
 
-        // Check if we have a Herbie script and parsed script
-        const herbieScript = usabilityTest.herbieScript || '';
-        const herbieScriptParsed = usabilityTest.herbieScriptParsed || [];
-        
-        console.log("Ending test with Herbie script:", herbieScript);
-        console.log("Parsed Herbie script commands:", herbieScriptParsed);
+    // Format time properly
+    const timeString = formatTime(elapsedTime);
+    
+    // Get the tester name if available
+    const testerName = usabilityTest.testerName || 'Unknown';
+    
+    // Get task name if available
+    const taskName = usabilityTest.taskName || 'Unknown Task';
+    
+    // Send complete information with the endUsabilityTest message
+    chrome.runtime.sendMessage({
+        action: "endUsabilityTest",
+        taskId: usabilityTest.taskId,
+        taskName: taskName,
+        testerName: testerName,
+        time: timeString
+    });
 
-        // Find verification commands for usability validation
-        const verifyCommands = herbieScript
-            ? herbieScript.split('\n')
-                .filter(line => line.trim().startsWith('verify'))
-                .join('\n')
-            : '';
-
-        console.log("Verification commands:", verifyCommands);
-
-        // Send both with the endUsabilityTest message
-        chrome.runtime.sendMessage({
-            action: "endUsabilityTest",
-            taskId: usabilityTest.taskId,
-            time : formatTime(elapsedTime)
-        });
-
-        chrome.storage.local.remove("usabilityTest", () => {
-            usabilityTest = null;
-        });
-    }
+    chrome.storage.local.remove("usabilityTest", () => {
+        usabilityTest = null;
+    });
+}
   
     function formatTime(ms) {
         const minutes = Math.floor(ms / 60000);

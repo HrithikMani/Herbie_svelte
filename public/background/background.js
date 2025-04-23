@@ -65,12 +65,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: "Hi from bg" });
   }
 
-  if(message.action  ==="verifyStatement"){
-      //verifyStmpts[message.data]=alse;
-      if(message.result){
-        verifyStmpts[message.data]=message.result.message;
-      }
-  }
+  if (message.action === "verifyStatement") {
+    // Store the verification result regardless of success or failure
+    if(message.result){
+      verifyStmpts[message.data]=message.result.message;
+    }
+}
   return true; 
 });
 
@@ -238,6 +238,8 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
         "taskId": message.taskId,
         "time": message.time,
         "verify_statements": JSON.stringify(verifyStmpts),
+        "taskName": message.taskName,
+        "testerName": message.testerName,
         
     };
       
