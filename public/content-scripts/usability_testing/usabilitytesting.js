@@ -10,7 +10,8 @@ window.addEventListener("message", (event) => {
             taskId: event.data.taskId,
             taskName: event.data.taskName,
             description: event.data.description,
-            testHerbieScript: event.data.testHerbieScript
+            testHerbieScript: event.data.testHerbieScript,
+            testerName: event.data.testerName,
         });
     }
    
@@ -43,7 +44,7 @@ window.addEventListener("message", (event) => {
 
         // Update the attribute with JSON string
         resultDiv.setAttribute("data-test-results", JSON.stringify(message.data));
-        console.log("data-test-results"+ JSON.stringify(message.data));
+        console.log(message.data);
 
         sendResponse({ status: "Test results rendered successfully" });
     }
