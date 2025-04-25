@@ -5,6 +5,8 @@ import {handleRunScript,handleExecuteScript} from './utils/runUtils.js';
 let line = 0;
 let cmdtree= null;
 let verifyStmpts = {};
+let usabilityHerbieScript=null;
+let usabilityHerbieScriptParsed=null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'parseLine') {
     (async () => {
@@ -66,11 +68,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "verifyStatement") {
-    // Store the verification result regardless of success or failure
-    if(message.result){
-      verifyStmpts[message.data]=message.result.message;
+    // Store all verification attempts, whether successful or not
+    const data = message.data; // The verification statement text
+    
+    if (message.result) {
+      // If we have a result object, store it with success status
+      verifyStmpts[data] = {
+        message: message.result.message,
+        success: message.result.success || false // Default to true if not specified
+      };
+    } else {
+      // If no result object was provided, record it as a failed verification
+      verifyStmpts[data] = {
+        message: "Verification condition was not met during test",
+        success: false
+      };
     }
-}
+  }
   return true; 
 });
 
@@ -80,97 +94,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 
-
-
-
-
-
-
-
-//usability testing
-async function processTestResults(taskId) {
-  return new Promise((resolve) => {
-      chrome.storage.local.get("userActions", async (result) => {
-          let userActions = result.userActions || [];
-
-          if (!usabilityHerbieScriptParsed || usabilityHerbieScriptParsed.length === 0) {
-              let summary = {
-                  taskId: taskId,
-                  time: Math.floor(Math.random() * 60) + 20, 
-                  steps: userActions.map(a => `${a.action} on ${a.identifier}`).join(", "),
-                  errors: userActions.length < 3 ? "No major issues detected" : "Multiple interactions recorded",
-                  rating: Math.max(1, 5 - Math.floor(userActions.length / 5))
-              };
-              resolve(summary);
-              return;
-          }
-
-          console.log("Expected Steps:", usabilityHerbieScriptParsed);
-          console.log("Executed Steps:", userActions);
-
-          let expectedSteps = usabilityHerbieScriptParsed.map(cmd => ({
-              action: cmd.code[0], 
-              identifier: cmd.code[cmd.code.indexOf("in") + 1], 
-              src: cmd.src 
-          }));
-
-          // **Ensure content script is injected before sending messages**
-          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-              if (tabs.length === 0) {
-                  console.log("No active tab found.");
-                  resolve({ error: "No active tab found." });
-                  return;
-              }
-
-              let activeTab = tabs[0];
-
-              // Inject content script manually if not already injected
-              chrome.scripting.executeScript({
-                  target: { tabId: activeTab.id },
-                  files: ["content-scripts.js"]
-              }, () => {
-                  console.log("Content script injected.");
-
-                  chrome.tabs.sendMessage(activeTab.id, {
-                      action: "validateXpaths",
-                      expectedSteps: expectedSteps,
-                      userActions: userActions 
-                  }, (validatedResults) => {
-                      if (chrome.runtime.lastError) {
-                          console.log("Error communicating with content script:", chrome.runtime.lastError);
-                          resolve({ error: "Content script communication failed." });
-                          return;
-                      }
-
-                      console.log("Validation Results from Content Script:", validatedResults);
-
-                      let matchedSteps = [];
-                      let mismatchedSteps = [];
-
-                      validatedResults.forEach(validation => {
-                          if (validation.matched) {
-                              matchedSteps.push(validation.src);
-                          } else {
-                              mismatchedSteps.push(validation.src);
-                          }
-                      });
-
-                      let errorCount = mismatchedSteps.length;
-                      let summary = {
-                          taskId: taskId,
-                          time: Math.floor(Math.random() * 60) + 20,
-                          steps: matchedSteps.length ? `Matched: ${matchedSteps.join(", ")}` : "No matched steps",
-                          errors: errorCount > 0 ? `Missed Steps: ${mismatchedSteps.join("; ")}` : "No major issues detected",
-                          rating: Math.max(1, 5 - errorCount) 
-                      };
-
-                      resolve(summary);
-                  });
-              });
-          });
-      });
-  });
-}
 
 
 
@@ -189,8 +112,7 @@ function sendTestResultsToTargetTab(testResults) {
   });
 }
 
-let usabilityHerbieScript=null;
-let usabilityHerbieScriptParsed=null;
+
 
 chrome.runtime.onMessage.addListener(async(message, sender, sendResponse) => {
   console.log("Received message from content script:", message);
@@ -199,16 +121,34 @@ chrome.runtime.onMessage.addListener(async(message, sender, sendResponse) => {
     usabilityHerbieScript = message.testHerbieScript;
     usabilityHerbieScriptParsed = await ParseScript(usabilityHerbieScript);
     console.log(usabilityHerbieScriptParsed);
+    console.log(message.testerName);
+    
+    // Initialize all verification statements as false
+    verifyStmpts = {}; // Clear any previous verification statements
+    
+    // Add each verification statement from the parsed script with initial false status
+    if (Array.isArray(usabilityHerbieScriptParsed)) {
+      usabilityHerbieScriptParsed.forEach(command => {
+        if (command.code[0] === "verify") {
+          verifyStmpts[command.src] = {
+            message: "Verification not yet met",
+            success: false
+          };
+        }
+      });
+    }
     
     // Create test details with both raw and parsed scripts
     const testDetails = {
         taskId: message.taskId,
         taskName: message.taskName,
+        testerName: message.testerName,
         description: message.description,
         status: "in-progress",
         startTime: Date.now(),
         herbieScript: usabilityHerbieScript,           // Store the raw script
-        herbieScriptParsed: usabilityHerbieScriptParsed // Store the parsed script
+        herbieScriptParsed: usabilityHerbieScriptParsed, // Store the parsed script
+        initialVerifyStmpts: JSON.parse(JSON.stringify(verifyStmpts)) // Store a copy of the initial verification statements
     };
     
     // Save to Chrome storage
