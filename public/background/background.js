@@ -75,7 +75,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // If we have a result object, store it with success status
       verifyStmpts[data] = {
         message: message.result.message,
-        success: message.result.success || true // Default to true if not specified
+        success: message.result.success || false // Default to true if not specified
       };
     } else {
       // If no result object was provided, record it as a failed verification
