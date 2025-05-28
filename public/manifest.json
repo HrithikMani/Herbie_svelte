@@ -47,7 +47,7 @@
               "content-scripts/usability_testing/verificationIntegration.js",
               "content-scripts/content-scripts.js",
               "content-scripts/dragdrop.js",
-              "content-scripts/test.json",
+         
               "content-scripts/userinteractions.js",
               "content-scripts/usability_testing/usabilitytesting.js",
               "content-scripts/inspector.js"
