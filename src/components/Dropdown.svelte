@@ -9,7 +9,7 @@
     // { id: 'tab5', label: 'Record' },
     { id: 'tab6', label: 'Usability Testing' },
     { id: 'tab2', label: 'Logs' },
-    { id: 'tab7', label: 'Inject Herbie' },
+    // { id: 'tab7', label: 'Inject Herbie' },
   ];
 
   let isDropdownVisible = false;
