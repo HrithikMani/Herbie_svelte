@@ -159,20 +159,36 @@
   };
 
   const importKeywords = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importedKeywords = JSON.parse(e.target.result);
-          processImportedKeywords(importedKeywords);
-        } catch (error) {
-          console.error("Invalid JSON file:", error);
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        
+        // Check if the imported data has the expected format
+        if (importedData.globalKeywords || importedData.localKeywords) {
+          // This is the combined format with both global and local keywords
+          chrome.storage.local.set({
+            globalKeywords: importedData.globalKeywords || [],
+            localKeywords: importedData.localKeywords || {}
+          }, () => {
+            console.log("All keywords imported successfully.");
+            // Reload the keywords to update the UI
+            loadKeywords();
+          });
+        } else {
+          // Fallback for older format - assume it's just a simple array of keywords
+          processImportedKeywords(importedData);
         }
-      };
-      reader.readAsText(file);
-    }
-  };
+      } catch (error) {
+        console.error("Invalid JSON file:", error);
+        alert("Error importing keywords: Invalid file format");
+      }
+    };
+    reader.readAsText(file);
+  }
+};
 
   const processImportedKeywords = (keywords) => {
     if (activeTab === "global") {
@@ -307,23 +323,34 @@
 
   // Export keywords function
   const exportKeywords = () => {
-    const keywordsToExport = activeTab === 'global' ? globalKeywords : localKeywords;
+  // Get both global and local keywords together
+  chrome.storage.local.get(["globalKeywords", "localKeywords"], (result) => {
+    // Create a combined object with all keywords
+    const allKeywords = {
+      globalKeywords: result.globalKeywords || [],
+      localKeywords: result.localKeywords || {}
+    };
     
-    if (keywordsToExport.length === 0) {
+    if (
+      (allKeywords.globalKeywords.length === 0) && 
+      (Object.keys(allKeywords.localKeywords).length === 0)
+    ) {
       alert('No keywords to export');
       return;
     }
     
-    const blob = new Blob([JSON.stringify(keywordsToExport, null, 2)], {type: 'application/json'});
+    // Create and trigger download
+    const blob = new Blob([JSON.stringify(allKeywords, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = activeTab === 'global' ? 'global-keywords.json' : `${currentHostname}-keywords.json`;
+    a.download = 'herbie-all-keywords.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
+  });
+};
 
   // Handle inspect button click - NEW FUNCTION
   const handleInspectClick = () => {

@@ -27,7 +27,53 @@ async function setupTextVerificationObserver(verifyData, callback) {
         return null;
     }
     
-    // Create a mutation observer
+    // *** NEW CODE: Perform immediate verification check ***
+    const actualText = element.innerText.trim();
+    const expectedText = verifyData.verifyExpected;
+    const operator = verifyData.verifyOperator || "contains";
+    
+    let initialResult = false;
+    // Check text according to operator
+    switch (operator) {
+        case "equals":
+            initialResult = actualText === expectedText;
+            break;
+        case "contains":
+            initialResult = actualText.includes(expectedText);
+            break;
+        case "starts_with":
+            initialResult = actualText.startsWith(expectedText);
+            break;
+        case "ends_with":
+            initialResult = actualText.endsWith(expectedText);
+            break;
+    }
+    
+    // If verification already passes, report success immediately
+    if (initialResult) {
+        console.log(`Text verification passed immediately: ${operator} "${expectedText}"`);
+        
+        // Send verification result to background
+        chrome.runtime.sendMessage({
+            action: "verifyStatement",
+            data: verifyData.src,
+            result: {
+                success: true,
+                message: `Text ${operator.replace('_', ' ')} "${expectedText}" verified`,
+                actualValue: actualText
+            }
+        });
+        
+        // Execute callback if provided
+        if (typeof callback === 'function') {
+            callback(true);
+        }
+        
+        // No need to set up an observer
+        return null;
+    }
+    
+    // Create a mutation observer only if the initial check failed
     const observer = new MutationObserver(mutations => {
         // Check if element is still in the DOM
         const inDom = document.body.contains(element);
@@ -53,7 +99,6 @@ async function setupTextVerificationObserver(verifyData, callback) {
             // Check text according to operator
             switch (operator) {
                 case "equals":
-                    console.log("dasda");
                     result = actualText === expectedText;
                     break;
                 case "contains":
@@ -65,9 +110,6 @@ async function setupTextVerificationObserver(verifyData, callback) {
                 case "ends_with":
                     result = actualText.endsWith(expectedText);
                     break;
-                default:
-                    console.warn(`Unknown operator: ${operator}`);
-                    return;
             }
             
             // If verification passes, trigger callback
