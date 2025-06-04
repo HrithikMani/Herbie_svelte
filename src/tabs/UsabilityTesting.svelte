@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from "svelte";
-  
+    import InjectHerbieButton from '../components/InjectHerbieButton.svelte';
     let usabilityTest = null;
     let isRunning = false;
     let elapsedTime = 0;
@@ -91,6 +91,13 @@
 <div id="usability-test">
     <h1>Usability Testing Mode</h1>
   
+    <InjectHerbieButton 
+    buttonText="Inject Herbie" 
+    title="Herbie - Usability Testing"
+    testScript={usabilityTest?.herbieScript || ""}
+/>
+
+
     {#if usabilityTest}
         <div class="test-details">
             <h2>{usabilityTest.taskName}</h2>

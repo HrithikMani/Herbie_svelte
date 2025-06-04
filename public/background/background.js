@@ -281,3 +281,163 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 
+// Add this to your existing background.js file
+
+// Enhanced navigation listener for component re-injection
+chrome.webNavigation.onDOMContentLoaded.addListener(async (details) => {
+  console.log("\nNavigating to :" + details.url + "\n");
+  console.log(line);
+  
+  // Only handle main frame navigations (not iframes)
+  if (details.frameId === 0) {
+    // Check if we need to re-inject components
+    await handleComponentReinjection(details.tabId, details.url);
+  }
+});
+
+// Function to handle component re-injection
+async function handleComponentReinjection(tabId, url) {
+  try {
+    // Get injection state from storage
+    const result = await chrome.storage.local.get(['injectedComponent']);
+    
+    if (result.injectedComponent && result.injectedComponent.isActive) {
+      console.log('Found active injection, re-injecting on new page:', url);
+      
+      // Import and use the re-injection function
+      // Note: You'll need to adapt this based on your module system
+      const { checkAndReinject } = await import('../utils/injectComponent.js');
+      await checkAndReinject(tabId);
+    }
+  } catch (error) {
+    console.error('Error during component re-injection:', error);
+  }
+}
+
+// Listen for messages to manage injection state
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message.action === 'setInjectionState') {
+    try {
+      await chrome.storage.local.set({
+        injectedComponent: {
+          ...message.componentData,
+          isActive: true,
+          timestamp: Date.now()
+        }
+      });
+      sendResponse({ status: 'success', message: 'Injection state saved' });
+    } catch (error) {
+      sendResponse({ status: 'error', message: error.message });
+    }
+    return true;
+  }
+  
+  if (message.action === 'clearInjectionState') {
+    try {
+      await chrome.storage.local.remove(['injectedComponent']);
+      sendResponse({ status: 'success', message: 'Injection state cleared' });
+    } catch (error) {
+      sendResponse({ status: 'error', message: error.message });
+    }
+    return true;
+  }
+  
+  if (message.action === 'getInjectionState') {
+    try {
+      const result = await chrome.storage.local.get(['injectedComponent']);
+      sendResponse({ 
+        status: 'success', 
+        data: result.injectedComponent || null 
+      });
+    } catch (error) {
+      sendResponse({ status: 'error', message: error.message });
+    }
+    return true;
+  }
+  
+  // Handle existing messages...
+  // [Your existing message handlers go here]
+});
+
+// Alternative approach using content script messaging
+// This runs the re-injection directly without importing modules
+async function reinjeetComponentDirect(tabId) {
+  try {
+    const result = await chrome.storage.local.get(['injectedComponent']);
+    
+    if (result.injectedComponent && result.injectedComponent.isActive) {
+      const { componentName, scriptPath, cssPath, props, mountId } = result.injectedComponent;
+      
+      console.log('Re-injecting component on new page...');
+      
+      // Wait a bit for page to be ready
+      setTimeout(async () => {
+        try {
+          // Inject styles
+          if (cssPath) {
+            await chrome.scripting.insertCSS({
+              target: { tabId },
+              files: [cssPath]
+            });
+          }
+
+          // Inject script
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            files: [scriptPath]
+          });
+
+          // Mount component
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            func: (id, componentName, props) => {
+              // Check if already exists
+              if (document.getElementById(id)) {
+                console.log('Component already exists, skipping injection');
+                return;
+              }
+              
+              const mountEl = document.createElement('div');
+              mountEl.id = id;
+              document.body.insertBefore(mountEl, document.body.firstChild);
+              
+              const ComponentClass = window[componentName];
+              if (ComponentClass) {
+                new ComponentClass({ 
+                  target: mountEl,
+                  props
+                });
+                console.log(`Re-injected ${componentName} successfully`);
+              } else {
+                console.error(`Component ${componentName} not found during re-injection`);
+                // Retry after a short delay
+                setTimeout(() => {
+                  const retryClass = window[componentName];
+                  if (retryClass) {
+                    new retryClass({ target: mountEl, props });
+                    console.log(`Re-injected ${componentName} on retry`);
+                  }
+                }, 500);
+              }
+            },
+            args: [mountId, componentName, props]
+          });
+        } catch (error) {
+          console.error('Error during re-injection:', error);
+        }
+      }, 1500); // 1.5 second delay to ensure page is loaded
+    }
+  } catch (error) {
+    console.error('Error checking for re-injection:', error);
+  }
+}
+
+// Use the direct approach in the navigation listener
+chrome.webNavigation.onDOMContentLoaded.addListener(async (details) => {
+  console.log("\nNavigating to :" + details.url + "\n");
+  
+  // Only handle main frame navigations (not iframes)
+  if (details.frameId === 0) {
+    await reinjeetComponentDirect(details.tabId);
+  }
+});
