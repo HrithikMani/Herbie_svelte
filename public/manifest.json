@@ -45,6 +45,7 @@
               "content-scripts/usability_testing/verification/pageVerification.js",
               "content-scripts/usability_testing/verificationManager.js",
               "content-scripts/usability_testing/verificationIntegration.js",
+              "content-scripts/usability_testing/usabilityAutoSetup.js",
               "content-scripts/content-scripts.js",
               "content-scripts/dragdrop.js",
          
