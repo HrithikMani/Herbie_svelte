@@ -73,6 +73,40 @@
     }
     
     /**
+     * NEW: End test function for injected component
+     */
+    async function handleEndTest() {
+        if (!isTestActive) return;
+
+        try {
+            const timeString = formatTime(currentElapsedTime);
+            
+            // Send end test message to background (same as tab does)
+            chrome.runtime?.sendMessage({
+                action: "endUsabilityTest",
+                taskId: taskId,
+                taskName: taskName,
+                testerName: testerName,
+                time: timeString
+            });
+
+       
+
+            // Clean up test data from storage
+            chrome.storage?.local.remove("usabilityTest");
+            
+            console.log("✓ Test ended from injected interface - Component removed");
+            
+        } catch (error) {
+            console.error("Error ending test from injected component:", error);
+           
+        }
+        handleRemove(); // Remove the popup after ending the test
+        stopTimer(); // Stop the timer if it was running
+    }
+
+   
+    /**
      * Dragging functionality (existing code)
      */
     function startDrag(event) {
@@ -268,18 +302,18 @@
     {#if isTestActive && taskName}
         <div class="test-header">
             <div class="test-info-line">
-                <i class="fas fa-tasks"></i>
+             
                 <strong>{taskName}</strong>
             </div>
             {#if testerName}
                 <div class="test-info-line">
-                    <i class="fas fa-user"></i>
-                    {testerName}
+                 
+                    Name : {testerName}
                 </div>
             {/if}
             {#if description}
                 <div class="test-description">
-                    <i class="fas fa-info-circle"></i>
+                
                     {description}
                 </div>
             {/if}
@@ -302,11 +336,22 @@
     <div class="timer-display {isTestActive ? 'test-active' : ''}">
         {#if isTestActive}
             <i class="fas fa-stopwatch"></i>
-            Test Time: {displayTime}
+            Time: {displayTime}
         {:else}
             Timer: {displayTime}
         {/if}
     </div>
+
+    <!-- NEW: End Test Button - Only visible during active tests -->
+    {#if isTestActive}
+        <div class="end-test-section">
+            <button class="end-test-button" on:click={handleEndTest}>
+                
+                End Test
+            </button>
+           
+        </div>
+    {/if}
 
     <!-- Script Input - Hidden in usability testing mode -->
     {#if !isTestActive}
@@ -394,6 +439,16 @@
         margin-bottom: 10px;
     }
 
+    #injected-root.usability-mode .end-test-section {
+        margin: 10px 0;
+        padding: 12px;
+    }
+
+    #injected-root.usability-mode .end-test-button {
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+
     /* NEW: Test header styling */
     .test-header {
         background: #f8f9fa;
@@ -434,6 +489,57 @@
         border-radius: 8px;
         padding: 12px;
         box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+    }
+
+    /* NEW: End Test Section */
+    .end-test-section {
+        margin: 15px 0;
+        text-align: center;
+        padding: 15px;
+        background: #fff5f5;
+        border: 1px solid #fed7d7;
+        border-radius: 8px;
+    }
+
+    .end-test-button {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+        min-width: 120px;
+    }
+
+    .end-test-button:hover {
+        background: linear-gradient(135deg, #c82333, #bd2130);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+
+    .end-test-button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+    }
+
+    .end-test-help {
+        margin: 8px 0 0 0;
+        font-size: 12px;
+        color: #6c757d;
+        line-height: 1.3;
+    }
+
+    .end-test-help i {
+        color: #dc3545;
+        margin-right: 4px;
     }
 
     /* Verification results styling */

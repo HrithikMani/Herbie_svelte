@@ -280,7 +280,7 @@
                 </ol>
                 <p class="note">
                     <i class="fas fa-info-circle"></i>
-                    <strong>Note:</strong> The inject button is only available during active tests for security and clarity.
+                    <strong>Note:</strong> The inject button is only available during active tests for clarity.
                 </p>
             </div>
         </div>
