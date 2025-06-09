@@ -441,3 +441,32 @@ chrome.webNavigation.onDOMContentLoaded.addListener(async (details) => {
     await reinjeetComponentDirect(details.tabId);
   }
 });
+
+
+// Add this new handler specifically for usability testing - doesn't affect existing code
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+    if (message.action === "setupUsabilityObservers") {
+        try {
+            console.log("Setting up usability observers specifically");
+            
+            // Parse the script for this specific URL
+            const result = await ParseScript(message.herbieScript, message.url);
+            console.log("Parsed usability script:", result);
+            
+            // Send to content script with a specific action for usability
+            chrome.tabs.sendMessage(sender.tab.id, {
+                action: 'setUsabilityObserver',  // Different action name
+                herbie_object: result,
+                isUsabilityAutoSetup: true
+            });
+            
+            sendResponse({ status: 'success', message: 'Usability observers setup initiated' });
+        } catch (error) {
+            console.error("Error setting up usability observers:", error);
+            sendResponse({ status: 'error', message: error.message });
+        }
+        return true;
+    }
+    
+
+});

@@ -7,6 +7,18 @@
     export let removeText = "Remove Herbie";
     export let title = "Herbie Interface";
     export let testScript = "";
+    
+    // NEW: Additional props for usability testing
+    export let taskName = "";
+    export let testerName = "";
+    export let description = "";
+    export let startTime = null;
+    export let elapsedTime = 0;
+    export let taskId = "";
+    export let isTestActive = false;
+    export let testStatus = "inactive";
+    export let verificationResults = [];
+    export let testMetadata = {};
 
     // State
     let isInjected = false;
@@ -32,7 +44,7 @@
         }
     }
 
-    // Inject Herbie
+    // Inject Herbie with all props
     async function injectHerbie() {
         isLoading = true;
         try {
@@ -42,13 +54,24 @@
                 cssPath: 'build/injected/css/main-style.css',
                 props: { 
                     title: title,
-                    testScript: testScript
+                    testScript: testScript,
+                    // NEW: Pass all usability testing data
+                    taskName: taskName,
+                    testerName: testerName,
+                    description: description,
+                    startTime: startTime,
+                    elapsedTime: elapsedTime,
+                    taskId: taskId,
+                    isTestActive: isTestActive,
+                    testStatus: testStatus,
+                    verificationResults: verificationResults,
+                    testMetadata: testMetadata
                 },
                 persist: true
             });
             
             await checkInjectionState();
-            console.log('Herbie injected successfully');
+            console.log('Herbie injected successfully with usability testing data');
         } catch (error) {
             console.error('Error injecting Herbie:', error);
             alert('Failed to inject Herbie: ' + error.message);
@@ -79,18 +102,47 @@
 </script>
 
 <button 
-    class="inject-herbie-button {isInjected ? 'injected' : 'not-injected'}"
+    class="inject-herbie-button {isInjected ? 'injected' : 'not-injected'} {!isTestActive ? 'test-inactive' : ''}"
     on:click={toggleInjection}
-    disabled={isLoading}
+    disabled={isLoading || !isTestActive}
+    title={!isTestActive ? 'Injection only available during active tests' : 
+           (isTestActive ? `Active Test: ${taskName}` : (isInjected ? removeText : buttonText))}
 >
     {#if isLoading}
         <i class="fas fa-spinner fa-spin"></i>
         {isInjected ? 'Removing...' : 'Injecting...'}
+    {:else if !isTestActive}
+        <i class="fas fa-lock"></i>
+        Test Required
     {:else}
         <i class="fas {isInjected ? 'fa-times' : 'fa-robot'}"></i>
         {isInjected ? removeText : buttonText}
     {/if}
+    
+    <!-- Show test status indicator if active -->
+    {#if isTestActive && isInjected}
+        <span class="test-indicator">
+            <i class="fas fa-circle pulse"></i>
+        </span>
+    {/if}
 </button>
+
+<!-- Show test info or requirement message -->
+{#if isTestActive && taskName}
+    <div class="test-info active">
+        <small>
+            <i class="fas fa-user-check"></i> 
+            {taskName} - {testerName || 'Anonymous'}
+        </small>
+    </div>
+{:else if !isTestActive}
+    <div class="test-info inactive">
+        <small>
+            <i class="fas fa-exclamation-triangle"></i> 
+            Start a usability test to enable injection
+        </small>
+    </div>
+{/if}
 
 <style>
     .inject-herbie-button {
@@ -106,6 +158,7 @@
         justify-content: center;
         gap: 8px;
         min-width: 140px;
+        position: relative;
     }
 
     .inject-herbie-button.not-injected {
@@ -135,6 +188,49 @@
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
+    }
+
+    .inject-herbie-button.test-inactive {
+        background: #6c757d !important;
+        color: white;
+    }
+
+    .inject-herbie-button.test-inactive:hover {
+        background: #5a6268 !important;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .test-indicator {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        color: #ffc107;
+        font-size: 10px;
+    }
+
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    .test-info {
+        margin-top: 5px;
+        text-align: center;
+        font-size: 12px;
+    }
+
+    .test-info.active {
+        color: #28a745;
+    }
+
+    .test-info.inactive {
+        color: #ffc107;
     }
 
     .fa-spinner {
