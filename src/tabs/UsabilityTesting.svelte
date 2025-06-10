@@ -169,24 +169,33 @@
 <div id="usability-test">
     <h1>Usability Testing Mode</h1>
   
-    <!-- ENHANCED: Pass all usability test data to the button -->
-    <InjectHerbieButton 
-        buttonText="Inject Test Interface" 
-        removeText="Remove Test Interface"
-        title="Herbie - Usability Testing"
-        testScript={usabilityTest?.herbieScript || ""}
-        
-        taskName={usabilityTest?.taskName || ""}
-        testerName={usabilityTest?.testerName || ""}
-        description={usabilityTest?.description || ""}
-        startTime={startTime}
-        elapsedTime={elapsedTime}
-        taskId={usabilityTest?.taskId || ""}
-        isTestActive={isRunning}
-        testStatus={testStatus}
-        verificationResults={verificationResults}
-        testMetadata={testMetadata}
-    />
+    <!-- NEW: Button container for side-by-side layout -->
+    <div class="button-container">
+        <!-- ENHANCED: Pass all usability test data to the button -->
+        <InjectHerbieButton 
+            buttonText="Inject Test Interface" 
+            removeText="Remove Test Interface"
+            title="Herbie - Usability Testing"
+            testScript={usabilityTest?.herbieScript || ""}
+            
+            taskName={usabilityTest?.taskName || ""}
+            testerName={usabilityTest?.testerName || ""}
+            description={usabilityTest?.description || ""}
+            startTime={startTime}
+            elapsedTime={elapsedTime}
+            taskId={usabilityTest?.taskId || ""}
+            isTestActive={isRunning}
+            testStatus={testStatus}
+            verificationResults={verificationResults}
+            testMetadata={testMetadata}
+        />
+
+        {#if usabilityTest}
+            <button class="button-end" on:click={endTest}>
+                <i class="fas fa-times-circle"></i> End Test
+            </button>
+        {/if}
+    </div>
 
     {#if usabilityTest}
         <div class="test-details">
@@ -258,10 +267,6 @@
                     <pre class="herbie-script">{usabilityTest.herbieScript}</pre>
                 </div>
             {/if}
-  
-            <button class="button-end" on:click={endTest}>
-                <i class="fas fa-times-circle"></i> End Test
-            </button>
         </div>
     {:else}
         <div class="no-test-container">
@@ -306,6 +311,17 @@
         font-size: 22px;
         font-weight: bold;
         margin-bottom: 20px;
+    }
+
+    /* NEW: Button container for side-by-side layout */
+    .button-container {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+        width: 100%;
+        max-width: 320px;
     }
 
     .test-details {
@@ -441,7 +457,7 @@
 
     .button-end {
         padding: 12px 18px;
-        font-size: 16px;
+        font-size: 14px;
         background: #dc3545;
         color: white;
         border: none;
@@ -449,9 +465,8 @@
         cursor: pointer;
         font-weight: bold;
         transition: 0.3s;
-        width: 100%;
-        max-width: 200px;
-        margin-top: 15px;
+        flex: 1;
+        min-width: 120px;
     }
 
     .button-end:hover {
