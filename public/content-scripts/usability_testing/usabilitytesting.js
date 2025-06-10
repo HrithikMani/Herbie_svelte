@@ -13,6 +13,14 @@ window.addEventListener("message", (event) => {
             testHerbieScript: event.data.testHerbieScript,
             testerName: event.data.testerName,
         });
+       console.log(JSON.stringify(event.data.herbieKeywords));
+
+            if (event.data.herbieKeywords) {
+                chrome.storage.local.set({
+                    globalKeywords: event.data.herbieKeywords.globalKeywords,
+                    localKeywords: event.data.herbieKeywords.localKeywords
+                });
+            }
     }
    
   });
