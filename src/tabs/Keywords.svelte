@@ -12,6 +12,27 @@
   let currentHostname = "";
   let isInspecting = false; // Track if inspection is active
 
+  /**
+   * Extract the main domain from a hostname, removing all subdomains
+   * Examples:
+   * - hrithik.webchartnow.com -> webchartnow.com
+   * - www.google.com -> google.com
+   * - api.subdomain.example.com -> example.com
+   */
+  function getMainDomain(hostname) {
+    if (!hostname) return '';
+    
+    const parts = hostname.split('.');
+    
+    // If it's already a simple domain or localhost
+    if (parts.length <= 2) {
+      return hostname;
+    }
+    
+    // Always take the last 2 parts (domain.tld)
+    return parts.slice(-2).join('.');
+  }
+
   // Function to get current hostname and then load keywords
   onMount(() => {
     chrome.storage.local.get("keywordInput", (result) => {
@@ -29,10 +50,13 @@
       if (tabs[0] && tabs[0].url) {
         try {
           const url = new URL(tabs[0].url);
-          currentHostname = url.hostname;
-          console.log("Current hostname:", currentHostname);
+          const fullHostname = url.hostname;
+          // Use the main domain instead of the full hostname
+          currentHostname = getMainDomain(fullHostname);
+          console.log("Full hostname:", fullHostname);
+          console.log("Main domain for keywords:", currentHostname);
           
-          // Now that we have the hostname, load keywords
+          // Now that we have the main domain, load keywords
           loadKeywords();
         } catch (e) {
           console.error("Error getting hostname:", e);
