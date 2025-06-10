@@ -77,6 +77,28 @@ async function ParseScript(script, currentUrl) {
     return cmdtree;
 }
 
+/**
+ * Extract the main domain from a hostname, removing all subdomains
+ * Same logic as used in Keywords.svelte
+ * Examples:
+ * - hrithik.webchartnow.com -> webchartnow.com
+ * - www.google.com -> google.com
+ * - api.subdomain.example.com -> example.com
+ */
+function getMainDomain(hostname) {
+    if (!hostname) return '';
+    
+    const parts = hostname.split('.');
+    
+    // If it's already a simple domain or localhost
+    if (parts.length <= 2) {
+        return hostname;
+    }
+    
+    // Always take the last 2 parts (domain.tld)
+    return parts.slice(-2).join('.');
+}
+
 // Helper function to load all keywords from storage
 async function loadAllKeywords(hostname) {
     return new Promise((resolve) => {
@@ -84,8 +106,13 @@ async function loadAllKeywords(hostname) {
             const globalKeywords = result.globalKeywords || [];
             const localKeywords = result.localKeywords || {};
             
-            // Get local keywords for the current hostname
-            const pageLocalKeywords = hostname ? (localKeywords[hostname] || []) : [];
+            // Convert hostname to main domain for local keyword lookup
+            let pageLocalKeywords = [];
+            if (hostname) {
+                const mainDomain = getMainDomain(hostname);
+                console.log(`Parser: Full hostname: ${hostname}, Main domain for keywords: ${mainDomain}`);
+                pageLocalKeywords = localKeywords[mainDomain] || [];
+            }
             
             resolve({ globalKeywords, pageLocalKeywords });
         });
@@ -159,11 +186,6 @@ async function parseStatement(stmt, cmd) {
     }
 }
 
-/**
- * Parse verification statements and extract verification properties
- * @param {string} verifyStatement - The full verification statement to parse
- * @param {object} cmd - The command object to update with verification properties
- */
 /**
  * Parse verification statements and extract verification properties
  * @param {string} verifyStatement - The full verification statement to parse
@@ -339,7 +361,7 @@ function parseVerificationStatement(verifyStatement, cmd) {
         cmd.code.push('in');
     }
 }
-// Process a command for keyword replacements
+
 // Process a command for keyword replacements
 async function processCommandKeywords(cmd, globalKeywords, pageLocalKeywords) {
     // Find the "in" clause in the command
@@ -430,4 +452,5 @@ async function processCommandKeywords(cmd, globalKeywords, pageLocalKeywords) {
         console.log(`No keyword found for "${targetRef}"`);
     }
 }
+
 export { ParseScript };
