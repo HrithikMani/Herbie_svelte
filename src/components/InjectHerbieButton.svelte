@@ -130,10 +130,7 @@
 <!-- Show test info or requirement message -->
 {#if isTestActive && taskName}
     <div class="test-info active">
-        <small>
-            <i class="fas fa-user-check"></i> 
-            {taskName} - {testerName || 'Anonymous'}
-        </small>
+        
     </div>
 {:else if !isTestActive}
     <div class="test-info inactive">
