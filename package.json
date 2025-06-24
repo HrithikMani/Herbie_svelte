@@ -21,8 +21,7 @@
     "svelte": "^3.55.0"
   },
   "dependencies": {
-    "mie-ds-brand-grayscale-light": "^1.0.31",
-    "mie-ds-button": "^1.0.1",
+   
     "sirv-cli": "^2.0.0"
   }
 }
